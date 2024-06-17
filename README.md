@@ -41,7 +41,7 @@ pip install -r requirements.txt
 > [!TIP]
 > This AVS employs the [eigensdk-python](https://github.com/abramsymons/eigensdk-python) to facilitate interaction with EigenLayer contracts and to aggregate BLS signatures.
 
-## Running via make
+## Running
 
 This simple session illustrates the basic flow of the AVS. The makefile commands are hardcoded for a single operator, but it's however easy to create new operator config files, and start more operators manually (see the actual commands that the makefile calls).
 

@@ -2,7 +2,7 @@
 
 <b> Do not use it in Production, testnet only. </b>
 
-A Python implemention of the EigenLayer [Incredible Squaring AVS](https://github.com/Layr-Labs/incredible-squaring-avs) 
+A Python implementation of the EigenLayer [Incredible Squaring AVS](https://github.com/Layr-Labs/incredible-squaring-avs) 
 
 ## Dependencies
 

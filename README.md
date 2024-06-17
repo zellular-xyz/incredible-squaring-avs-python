@@ -6,21 +6,40 @@ A Python implemention of the EigenLayer [Incredible Squaring AVS](https://github
 
 ## Dependencies
 
-You will need [foundry](https://book.getfoundry.sh/getting-started/installation) and docker to run the examples below.
+1. Install [foundry](https://book.getfoundry.sh/getting-started/installation)
 ```
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-You will also need to [install docker](https://docs.docker.com/get-docker/), and build the contracts:
+2. Install [docker](https://docs.docker.com/get-docker/)
+
+3. Build the contracts:
 ```
 make build-contracts
 ```
 
-You will also need Python3 and install required modules:
+4. Install [MCL](https://github.com/herumi/mcl)
+```
+sudo apt install libgmp3-dev
+wget https://github.com/herumi/mcl/archive/refs/tags/v1.93.zip
+unzip v1.93.zip
+cd mcl-1.93
+mkdir build
+cd build
+cmake ..
+make
+make install
+```
+
+5. Python3
+6. Install required modules:
 ```
 pip install -r requirements.txt
 ```
+
+> [!TIP]
+> This AVS employs the [eigensdk-python](https://github.com/abramsymons/eigensdk-python) to facilitate interaction with EigenLayer contracts and to aggregate BLS signatures.
 
 ## Running via make
 

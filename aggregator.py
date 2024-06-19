@@ -158,7 +158,6 @@ class Aggregator:
     def __load_clients(self):
         cfg = BuildAllConfig(
             eth_http_url=self.config["eth_rpc_url"],
-            eth_ws_url=self.config["eth_ws_url"],
             avs_name="incredible-squaring",
             registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
             operator_state_retriever_addr=self.config["operator_state_retriever_address"],

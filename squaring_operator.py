@@ -11,6 +11,7 @@ from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
 from eigensdk._types import Operator
+import zellular
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ class SquaringOperator:
         self.__load_bls_key()
         self.__load_ecdsa_key()
         self.__load_clients()
-        self.__load_task_manager()
+        self.__load_zellular()
         if config["register_operator_on_startup"] == 'true':
             self.register()
         # operator id can only be loaded after registration
@@ -47,20 +48,19 @@ class SquaringOperator:
 
     def start(self):
         logger.info("Starting Operator...")
-        event_filter = self.task_manager.events.NewTaskCreated.create_filter(
-            fromBlock="latest"
-        )
-        while True:
-            for event in event_filter.get_new_entries():
+        index = self.zellular.get_last_finalized()["index"]
+
+        for batch, index in self.zellular.batches(after=index):
+            events = json.loads(batch)
+            for i, event in enumerate(events):
                 logger.info(f"New task created: {event}")
                 self.process_task_event(event)
-            time.sleep(3)
 
     def process_task_event(self, event):
-        task_id = event["args"]["taskIndex"]
-        number_to_be_squared = event["args"]["task"]["numberToBeSquared"]
+        task_id = event["taskIndex"]
+        number_to_be_squared = event["numberToBeSquared"]
         number_squared = number_to_be_squared ** 2
-        encoded = eth_abi.encode(["uint32", "uint256"], [task_id, number_squared])
+        encoded = eth_abi.encode(["uint32", "uint256", "uint256"], [task_id, number_to_be_squared, number_squared])
         hash_bytes = Web3.keccak(encoded)
         signature = self.bls_key_pair.sign_message(msg_bytes=hash_bytes).to_json()
         logger.info(
@@ -72,7 +72,6 @@ class SquaringOperator:
             "number_to_be_squared": number_to_be_squared,
             "number_squared": number_squared,
             "signature": signature,
-            "block_number": event['blockNumber'],
             "operator_id": "0x" + self.operator_id.hex(),
         }
         logger.info(f"Submitting result for task to aggregator {data}")
@@ -110,22 +109,11 @@ class SquaringOperator:
         )
         self.clients = build_all(cfg, self.operator_ecdsa_private_key, logger)
 
-    def __load_task_manager(self):
-        web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
-
-        service_manager_address = self.clients.avs_registry_writer.service_manager_addr
-        with open("abis/IncredibleSquaringServiceManager.json") as f:
-            service_manager_abi = f.read()
-        service_manager = web3.eth.contract(
-            address=service_manager_address, abi=service_manager_abi
-        )
-
-        task_manager_address = (
-            service_manager.functions.incredibleSquaringTaskManager().call()
-        )
-        with open("abis/IncredibleSquaringTaskManager.json") as f:
-            task_manager_abi = f.read()
-        self.task_manager = web3.eth.contract(address=task_manager_address, abi=task_manager_abi)
+    def __load_zellular(self):
+        operators = zellular.get_operators()
+        base_url = random.choice(operators)["socket"]
+        app_name = "incredible-squaring"
+        self.zellular = zellular.Zellular(app_name, base_url)
 
     def __load_operator_id(self):
         self.operator_id = self.clients.avs_registry_reader.get_operator_id(

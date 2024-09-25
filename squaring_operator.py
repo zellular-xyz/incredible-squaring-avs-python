@@ -60,7 +60,7 @@ class SquaringOperator:
         task_id = event["taskIndex"]
         number_to_be_squared = event["numberToBeSquared"]
         number_squared = number_to_be_squared ** 2
-        encoded = eth_abi.encode(["uint32", "uint256", "uint256"], [task_id, number_to_be_squared, number_squared])
+        encoded = eth_abi.encode(["uint32", "uint256"], [task_id, number_squared])
         hash_bytes = Web3.keccak(encoded)
         signature = self.bls_key_pair.sign_message(msg_bytes=hash_bytes).to_json()
         logger.info(

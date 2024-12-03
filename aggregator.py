@@ -27,6 +27,7 @@ class Aggregator:
         self.web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
         self.__load_ecdsa_key()
         self.__load_clients()
+        self.__load_zellular()
         self.__load_task_manager()
         self.__load_bls_aggregation_service()
         self.tasks = {}
@@ -59,27 +60,12 @@ class Aggregator:
         self.app.run(host=host, port=port)
 
     def send_new_task(self, i):
-        tx = self.task_manager.functions.createNewTask(
-            i, 100, nums_to_bytes([0])
-        ).build_transaction({
-            "from": self.aggregator_address,
-            "gas": 2000000,
-            "gasPrice": self.web3.to_wei("20", "gwei"),
-            "nonce": self.web3.eth.get_transaction_count(
-                self.aggregator_address
-            ),
-            "chainId": self.web3.eth.chain_id,
-        })
-        signed_tx = self.web3.eth.account.sign_transaction(
-            tx, private_key=self.aggregator_ecdsa_private_key
-        )
-        tx_hash = self.web3.eth.send_raw_transaction(
-            signed_tx.rawTransaction
-        )
-        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-        event = self.task_manager.events.NewTaskCreated().process_log(receipt['logs'][0])
-
-        task_index = event['args']['taskIndex']
+        task = {
+            "numberToBeSquared": i,
+            "quorumNumbers": [0],
+            "quorumThresholdPercentage": 100,
+        }
+        task_index = self.zellular.send([task], blocking=True)
         logger.info(f"Successfully sent the new task {task_index}")
         self.bls_aggregation_service.initialize_new_task(
             task_index=task_index,
@@ -164,6 +150,12 @@ class Aggregator:
             prom_metrics_ip_port_address="",
         )
         self.clients = build_all(cfg, self.aggregator_ecdsa_private_key, logger)
+
+    def __load_zellular(self):
+        operators = zellular.get_operators()
+        base_url = random.choice(operators)["socket"]
+        app_name = "incredible-squaring"
+        self.zellular = zellular.Zellular(app_name, base_url)
 
     def __load_task_manager(self):
         service_manager_address = self.clients.avs_registry_writer.service_manager_addr

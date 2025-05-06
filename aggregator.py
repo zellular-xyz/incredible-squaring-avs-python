@@ -74,7 +74,7 @@ class Aggregator:
             tx, private_key=self.aggregator_ecdsa_private_key
         )
         tx_hash = self.web3.eth.send_raw_transaction(
-            signed_tx.rawTransaction
+            signed_tx.raw_transaction
         )
         receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
         event = self.task_manager.events.NewTaskCreated().process_log(receipt['logs'][0])
@@ -140,7 +140,7 @@ class Aggregator:
                 tx, private_key=self.aggregator_ecdsa_private_key
             )
             tx_hash = self.web3.eth.send_raw_transaction(
-                signed_tx.rawTransaction
+                signed_tx.raw_transaction
             )
             receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
             

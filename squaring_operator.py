@@ -15,6 +15,7 @@ from eigensdk._types import Operator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 class SquaringOperator:
     def __init__(self, config):
         self.config = config
@@ -26,7 +27,7 @@ class SquaringOperator:
             self.register()
         # operator id can only be loaded after registration
         self.__load_operator_id()
-        
+
     def register(self):
         operator = Operator(
             address=self.config["operator_address"],
@@ -48,7 +49,7 @@ class SquaringOperator:
     def start(self):
         logger.info("Starting Operator...")
         event_filter = self.task_manager.events.NewTaskCreated.create_filter(
-            fromBlock="latest"
+            from_block="latest"
         )
         while True:
             for event in event_filter.get_new_entries():
@@ -102,7 +103,6 @@ class SquaringOperator:
     def __load_clients(self):
         cfg = BuildAllConfig(
             eth_http_url=self.config["eth_rpc_url"],
-            eth_ws_url=self.config["eth_ws_url"],
             avs_name="incredible-squaring",
             registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
             operator_state_retriever_addr=self.config["operator_state_retriever_address"],

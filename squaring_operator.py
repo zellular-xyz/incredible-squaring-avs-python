@@ -58,18 +58,17 @@ class SquaringOperator:
             time.sleep(3)
 
     def process_task_event(self, event):
-        task_id = event["args"]["taskIndex"]
+        task_index = event["args"]["taskIndex"]
         number_to_be_squared = event["args"]["task"]["numberToBeSquared"]
         number_squared = number_to_be_squared ** 2
-        encoded = eth_abi.encode(["uint32", "uint256"], [task_id, number_squared])
+        encoded = eth_abi.encode(["uint32", "uint256"], [task_index, number_squared])
         hash_bytes = Web3.keccak(encoded)
         signature = self.bls_key_pair.sign_message(msg_bytes=hash_bytes).to_json()
         logger.info(
-            f"Signature generated, task id: {task_id}, number squared: {number_squared}, signature: {signature}"
+            f"Signature generated, task id: {task_index}, number squared: {number_squared}, signature: {signature}"
         )
-        print('operator data id', self.operator_id.hex())
         data = {
-            "task_id": task_id,
+            "task_index": task_index,
             "number_to_be_squared": number_to_be_squared,
             "number_squared": number_squared,
             "signature": signature,
@@ -90,6 +89,7 @@ class SquaringOperator:
         self.bls_key_pair = KeyPair.read_from_file(
             self.config["bls_private_key_store_path"], bls_key_password
         )
+        logger.info(f"BLS PubG1: {self.bls_key_pair.pub_g1.getStr()} PubG2: {self.bls_key_pair.pub_g2.getStr()}")
 
     def __load_ecdsa_key(self):
         ecdsa_key_password = os.environ.get("OPERATOR_ECDSA_KEY_PASSWORD", "")
@@ -99,6 +99,7 @@ class SquaringOperator:
         with open(self.config["ecdsa_private_key_store_path"], "r") as f:
             keystore = json.load(f)
         self.operator_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
+
 
     def __load_clients(self):
         cfg = BuildAllConfig(

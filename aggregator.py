@@ -190,9 +190,19 @@ class Aggregator:
             avs_name="incredible-squaring",
             registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
             operator_state_retriever_addr=self.config["operator_state_retriever_address"],
+            rewards_coordinator_addr=self.config["rewards_coordinator_address"],
+            permission_controller_addr=self.config["permission_controller_address"],
+            service_manager_addr=self.config["service_manager_address"],
+            allocation_manager_addr=self.config["allocation_manager_address"],
+            instant_slasher_addr=self.config["instant_slasher_address"],
+            delegation_manager_addr=self.config["delegation_manager_address"],
             prom_metrics_ip_port_address="",
         )
-        self.clients = build_all(cfg, self.aggregator_ecdsa_private_key, logger)
+        self.clients = build_all(cfg, self.aggregator_ecdsa_private_key)
+
+
+
+
 
     def __load_task_manager(self):
         service_manager_address = self.clients.avs_registry_writer.service_manager_addr

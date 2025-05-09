@@ -33,6 +33,7 @@ class SquaringOperator:
             address=self.config["operator_address"],
             earnings_receiver_address=self.config["operator_address"],
             delegation_approver_address="0x0000000000000000000000000000000000000000",
+            allocation_delay=100,
             staker_opt_out_window_blocks=0,
             metadata_url="",
         )
@@ -100,16 +101,22 @@ class SquaringOperator:
             keystore = json.load(f)
         self.operator_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
 
-
     def __load_clients(self):
-        cfg = BuildAllConfig(
-            eth_http_url=self.config["eth_rpc_url"],
-            avs_name="incredible-squaring",
-            registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
-            operator_state_retriever_addr=self.config["operator_state_retriever_address"],
-            prom_metrics_ip_port_address=self.config["eigen_metrics_ip_port_address"],
-        )
-        self.clients = build_all(cfg, self.operator_ecdsa_private_key, logger)
+            cfg = BuildAllConfig(
+                eth_http_url=self.config["eth_rpc_url"],
+                avs_name="incredible-squaring",
+                registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
+                operator_state_retriever_addr=self.config["operator_state_retriever_address"],
+                rewards_coordinator_addr=self.config["rewards_coordinator_address"],
+                permission_controller_addr=self.config["permission_controller_address"],
+                service_manager_addr=self.config["service_manager_address"],
+                allocation_manager_addr=self.config["allocation_manager_address"],
+                instant_slasher_addr=self.config["instant_slasher_address"],
+                delegation_manager_addr=self.config["delegation_manager_address"],
+                prom_metrics_ip_port_address="",
+            )
+            self.clients = build_all(cfg, self.operator_ecdsa_private_key)
+
 
     def __load_task_manager(self):
         web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))

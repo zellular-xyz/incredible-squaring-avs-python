@@ -12,7 +12,6 @@ from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
 from eigensdk._types import Operator
 
-# Constants from Go implementation
 AVS_NAME = "incredible-squaring"
 SEM_VER = "0.0.1"
 
@@ -352,21 +351,34 @@ class SquaringOperator:
             delay
         )
 
-    def create_total_delegated_stake_quorum(self, max_operator_count=100, kick_bips_operator_stake=100, 
-                                            kick_bips_total_stake=100, minimum_stake=1000000, multiplier=1):
+    def create_total_delegated_stake_quorum(
+        self,
+        max_operator_count=100,
+        kick_bips_operator_stake=100,
+        kick_bips_total_stake=100,
+        minimum_stake=1000000,
+        multiplier=1
+    ):
         """Create a total delegated stake quorum"""
-        # This is not typically called by the operator directly, but included for completeness
         if not hasattr(self.clients, 'avs_registry_writer'):
             logger.error("AVS registry writer not available")
             return
-            
-        self.clients.avs_registry_writer.create_total_delegated_stake_quorum(
-            max_operator_count,
-            kick_bips_operator_stake,
-            kick_bips_total_stake,
-            minimum_stake,
-            [{"strategy": self.config.get("token_strategy_addr"), "multiplier": multiplier}]
+
+        operator_set_params = (
+            max_operator_count,          # uint32
+            kick_bips_operator_stake,    # uint16
+            kick_bips_total_stake        # uint16
         )
+
+        strategy_addr = Web3.to_checksum_address(self.config.get("token_strategy_addr"))
+        strategy_params = [(strategy_addr, multiplier)]
+
+        self.clients.avs_registry_writer.create_total_delegated_stake_quorum(
+            operator_set_params,
+            minimum_stake,
+            strategy_params
+        )
+
     
     def print_operator_status(self):
         """Print the status of the operator"""
@@ -523,5 +535,3 @@ if __name__ == "__main__":
         operator.start()
     except Exception as e:
         logger.critical(f"Failed to start operator: {str(e)}")
-
-    

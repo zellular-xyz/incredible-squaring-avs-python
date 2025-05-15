@@ -10,13 +10,13 @@ import eth_abi
 from eth_account import Account
 from flask import Flask, request, jsonify
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
-from eigensdk.services.avsregistry import AvsRegistryService
+from eigensdk.services.avsregistry.avsregistry import AvsRegistryService
 from eigensdk.services.operatorsinfo.operatorsinfo_inmemory import OperatorsInfoServiceInMemory
 from eigensdk.services.bls_aggregation.blsagg import BlsAggregationService, BlsAggregationServiceResponse
 from eigensdk.chainio.utils import nums_to_bytes
 from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tupple, g2_to_tupple, new_zero_g1_point, new_zero_g2_point
 
-# Constants from Go implementation
+
 TASK_CHALLENGE_WINDOW_BLOCK = 100
 BLOCK_TIME_SECONDS = 12
 AVS_NAME = "incredible-squaring"
@@ -428,7 +428,7 @@ class Aggregator:
             allocation_manager_addr=self.config["allocation_manager_address"],
             instant_slasher_addr=self.config["instant_slasher_address"],
             delegation_manager_addr=self.config["delegation_manager_address"],
-            prom_metrics_ip_port_address="",
+            prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
         )
         self.clients = build_all(cfg, self.aggregator_ecdsa_private_key)
 

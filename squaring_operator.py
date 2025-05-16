@@ -141,7 +141,7 @@ class SquaringOperator:
             operator_to_avs_registration_sig_expiry=int(time.time()) + 3600,
             bls_key_pair=self.bls_key_pair,
             quorum_numbers=[0],
-            socket="Not Needed",
+            socket="operator-socket",
         )
         logger.info("Registration complete")
 
@@ -269,8 +269,8 @@ class SquaringOperator:
         operator = Operator(
             address=self.config["operator_address"],
             earnings_receiver_address=self.config["operator_address"],
-            delegation_approver_address="0x0000000000000000000000000000000000000000",
-            allocation_delay=100,
+            delegation_approver_address=self.config["operator_address"],
+            allocation_delay=0,
             staker_opt_out_window_blocks=0,
             metadata_url="",
         )
@@ -316,7 +316,7 @@ class SquaringOperator:
             "operator_address": self.config["operator_address"],
             "avs_address": self.config["service_manager_address"],
             "operator_set_ids": operator_set_ids,
-            "socket": "Not Needed",
+            "socket": "operator-socket",
             "bls_key_pair": self.bls_key_pair,
         }
         self.clients.el_writer.register_for_operator_sets(

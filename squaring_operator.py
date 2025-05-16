@@ -280,11 +280,11 @@ class SquaringOperator:
         """Deposit tokens into a strategy"""
         try:
             # Get token address for the strategy
-            token_addr = self.clients.el_reader.get_strategy_and_underlying_token(strategy_addr)
+            token_addr = self.clients.el_reader.get_strategy_and_underlying_token(self.web3.to_checksum_address(strategy_addr))
             
             # Mint tokens to the operator
             erc20_contract = self.web3.eth.contract(
-                address=Web3.to_checksum_address(token_addr),
+                address=Web3.to_checksum_address(token_addr[1]),
                 abi=self.__get_erc20_abi()
             )
             

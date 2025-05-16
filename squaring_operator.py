@@ -312,13 +312,16 @@ class SquaringOperator:
 
     def register_for_operator_sets(self, operator_set_ids):
         """Register the operator for operator sets"""
-        self.clients.avs_registry_writer.register_operator_in_quorum_with_avs_registry_coordinator(
-            operator_ecdsa_private_key=self.operator_ecdsa_private_key,
-            operator_to_avs_registration_sig_salt=randbytes(32),
-            operator_to_avs_registration_sig_expiry=int(time.time()) + 3600,
-            bls_key_pair=self.bls_key_pair,
-            quorum_numbers=operator_set_ids,
-            socket="Not Needed",
+        request = {
+            "operator_address": self.config["operator_address"],
+            "avs_address": self.config["service_manager_address"],
+            "operator_set_ids": operator_set_ids,
+            "socket": "Not Needed",
+            "bls_key_pair": self.bls_key_pair,
+        }
+        self.clients.el_writer.register_for_operator_sets(
+            self.config["avs_registry_coordinator_address"],
+            request
         )
 
     def modify_allocations(self, strategies, new_magnitudes, operator_set_id):

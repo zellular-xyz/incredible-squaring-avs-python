@@ -355,7 +355,7 @@ class Aggregator:
             response['number_to_be_squared'],
             response['block_number'],
             nums_to_bytes([0]),
-            100,
+            THRESHOLD_PERCENT,
         ]
         task_response = [
             response['task_index'],

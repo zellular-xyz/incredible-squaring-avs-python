@@ -3,7 +3,6 @@ import logging
 import json
 import time
 import threading
-import requests
 import yaml
 from web3 import Web3
 import eth_abi
@@ -69,18 +68,15 @@ class Aggregator:
         self.subgraph_url = "http://localhost:8000/subgraphs/name/avs-subgraph"
 
         # Initialize BLS aggregation service
-        self.operator_pubkeys_service = OperatorsInfoServiceInMemory(
-            self.clients.avs_registry_chain_subscriber,
-            self.clients.avs_registry_chain_reader,
-            None,
-            {},
-            logger
+        self.operator_info_service = OperatorsInfoServiceInMemory(
+            avs_registry_reader=self.clients.avs_registry_reader,
+            logger=logger
         )
 
         self.avs_registry_service = AvsRegistryService(
-            self.clients.avs_reader,
-            self.operator_pubkeys_service,
-            logger
+            avs_registry_reader=self.clients.avs_registry_reader,
+            operator_info_service=self.operator_info_service,
+            logger=logger
         )
 
         # Define hash function for task responses
@@ -97,9 +93,8 @@ class Aggregator:
             return Web3.keccak(encoded)
 
         self.bls_aggregation_service = BlsAggregationService(
-            self.avs_registry_service,
-            hash_function,
-            logger
+            avs_registry_service=self.avs_registry_service,
+            hash_function=hash_function,
         )
 
     def start(self, context):
@@ -121,20 +116,16 @@ class Aggregator:
         while True:
             try:
                 # Handle BLS aggregation service responses
-                bls_agg_service_resp = self.bls_aggregation_service.get_response()
-                if bls_agg_service_resp:
-                    logger.info("Received response from blsAggregationService", extra={"blsAggServiceResp": bls_agg_service_resp})
-                    self.send_aggregated_response_to_contract(bls_agg_service_resp)
+                for bls_agg_service_resp in self.bls_aggregation_service.get_aggregated_responses():
+                    if bls_agg_service_resp:
+                        logger.info("Received response from blsAggregationService", extra={"blsAggServiceResp": bls_agg_service_resp})
+                        self.send_aggregated_response_to_contract(bls_agg_service_resp)
             except Exception as e:
                 logger.error(f"Error in event processing: {str(e)}")
                 time.sleep(1)
 
     def send_aggregated_response_to_contract(self, bls_agg_service_resp: BlsAggregationServiceResponse):
         """Send aggregated response to the contract."""
-        if bls_agg_service_resp.err:
-            logger.error("BlsAggregationServiceResponse contains an error", extra={"err": bls_agg_service_resp.err})
-            return
-
         # Convert non-signer pubkeys to BN254G1Point format
         non_signer_pubkeys = []
         for pubkey in bls_agg_service_resp.non_signers_pubkeys_g1:
@@ -265,7 +256,7 @@ class Aggregator:
             if task_index not in self.tasks:
                 raise TaskNotFoundError()
                 
-            operators = self.__operators_info(data['block_number'])
+            operators = self.__operators_info()
             self.__verify_signature(data, operators)
 
             operator_id = data["operator_id"]
@@ -332,10 +323,10 @@ class Aggregator:
                 "quorum_apks_g1": [quorum_apks_g1],
                 "signers_apk_g2": signers_apk_g2,
                 "signers_agg_sig_g1": signers_agg_sig_g1,
-                "non_signer_quorum_bitmap_indices": indices.non_signer_quorum_bitmap_indices,
-                "quorum_apk_indices": indices.quorum_apk_indices,
-                "total_stake_indices": indices.total_stake_indices,
-                "non_signer_stake_indices": indices.non_signer_stake_indices,
+                "non_signer_quorum_bitmap_indices": indices[0],
+                "quorum_apk_indices": indices[1],
+                "total_stake_indices": indices[2],
+                "non_signer_stake_indices": indices[3],
             })
             return jsonify({"success": True, "message": "Threshold reached, aggregated response submitted"}), 200
             
@@ -448,61 +439,17 @@ class Aggregator:
             task_manager_abi = f.read()
         self.task_manager = self.web3.eth.contract(address=task_manager_address, abi=task_manager_abi)
 
-    def __operators_info(self, block):
+    def __operators_info(self):
         """Get operator information from the subgraph."""
-        query = f"""
-        {{
-            operators(block: {{ number: {block} }}) {{
-                id
-                operatorId
-                socket
-                stake
-                pubkeyG1_X
-                pubkeyG1_Y
-                pubkeyG2_X
-                pubkeyG2_Y
-            }}
-        }}
-        """
-        try:
-            response = requests.post(
-                self.subgraph_url,
-                headers={"content-type": "application/json"},
-                json={"query": query},
-            )
-            response.raise_for_status()
-
-            operators = response.json().get("data", {}).get("operators", [])
-            if not operators:
-                logger.warning(f"No operators found for block {block}")
-                return {}
-                
+        results = {}
+        for operator_id, op in self.operator_info_service.pubkey_dict.items():
             result = {}
-            for op in operators:
-                op["public_key_g1"] = G1Point(
-                    op["pubkeyG1_X"],
-                    op["pubkeyG1_Y"],
-                )
-                op["public_key_g2"] = G2Point(
-                    op["pubkeyG2_X"][0],
-                    op["pubkeyG2_X"][1],
-                    op["pubkeyG2_Y"][0],
-                    op["pubkeyG2_Y"][1],
-                )
-                op["stake"] = float(op["stake"])
-                result[op["operatorId"]] = op
-                
-            return result
-                
-        except (KeyError, TypeError, ValueError) as e:
-            logger.error(
-                f"Unexpected response format while parsing operators: "
-                f"{response.text if 'response' in locals() else 'No response'}, error: {e}"
-            )
-            raise InternalServerError()
-        except requests.RequestException as e:
-            logger.error(f"Failed to fetch operators info: {str(e)}")
-            raise InternalServerError()
+            result["public_key_g1"] = op.g1_pub_key
+            result["public_key_g2"] = op.g2_pub_key
+            result["stake"] = 70
+            results["0x" + operator_id.hex()] = result
+            
+        return results
 
 if __name__ == '__main__':
     with open("config-files/aggregator.yaml", "r") as f:

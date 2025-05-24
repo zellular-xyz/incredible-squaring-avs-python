@@ -8,6 +8,7 @@ import eth_abi
 from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 import yaml
+import time
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -73,13 +74,16 @@ class Challenger:
         self.logger.info("Starting Challenger.")
 
         # Subscribe to new tasks
-        new_task_sub = self.avs_subscriber.subscribe_to_new_tasks(self.new_task_created_channel)
-        self.logger.info("Subscribed to new tasks")
+        new_task_sub = self.task_manager.events.NewTaskCreated.create_filter(
+            from_block="latest"
+        )
 
         # Subscribe to task responses
-        task_response_sub = self.avs_subscriber.subscribe_to_task_responses(self.task_response_channel)
-        self.logger.info("Subscribed to task responses")
+        task_response_sub = self.task_manager.events.TaskResponded.create_filter(
+            from_block="latest"
+        )
 
+        logger.info("Listening for new events...")
         while True:
             try:
                 # Handle new task created events
@@ -122,12 +126,11 @@ class Challenger:
                         self.logger.error(f"Failed to process task response: {str(e)}")
                     except Exception as e:
                         self.logger.error(f"Unexpected error processing task response: {str(e)}")
+                time.sleep(3)
 
             except Exception as e:
                 self.logger.error(f"Error in event processing: {str(e)}")
-                # Resubscribe on error
-                new_task_sub = self.avs_subscriber.subscribe_to_new_tasks(self.new_task_created_channel)
-                task_response_sub = self.avs_subscriber.subscribe_to_task_responses(self.task_response_channel)
+                time.sleep(5)
 
     def process_new_task_created_log(self, new_task_created_log) -> int:
         """Process new task creation log."""

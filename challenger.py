@@ -142,13 +142,6 @@ class Challenger:
 
     def process_task_response_log(self, task_response_log) -> int:
         """Process task response log."""
-        task_response_raw_log = self.avs_subscriber.parse_task_responded(task_response_log["raw"])
-        if not task_response_raw_log:
-            self.logger.error(
-                "Error parsing task response. skipping task (this is probably bad and should be investigated)"
-            )
-            raise TaskResponseParsingError()
-
         # Get the inputs necessary for raising a challenge
         non_signing_operator_pub_keys = self.get_non_signing_operator_pub_keys(task_response_log)
         task_response = TaskResponse(
@@ -161,7 +154,7 @@ class Challenger:
             non_signing_operator_pub_keys=non_signing_operator_pub_keys
         )
 
-        task_index = task_response_raw_log["args"]["taskResponse"]["referenceTaskIndex"]
+        task_index = task_response_log["args"]["taskResponse"]["referenceTaskIndex"]
         self.task_responses[task_index] = task_response_data
         self.logger.debug(f"Processed task response for task {task_index} with number squared: {task_response.number_squared}")
         return task_index
@@ -192,56 +185,12 @@ class Challenger:
             self.logger.info("The number squared is correct")
             raise NoErrorInTaskResponse()
 
+    # TODO: For simplicty it just returns an empty list for now
+    # TODO: This should be implemented to return the public keys of the non-signing operators obtained from the task response metadata
     def get_non_signing_operator_pub_keys(self, v_log) -> List[dict]:
         """Get public keys of non-signing operators."""
         # Get the nonSignerStakesAndSignature
-        tx_hash = v_log["transactionHash"]
-        try:
-            tx = self.eth_http_client.eth.get_transaction(tx_hash)
-            if not tx:
-                self.logger.error(
-                    "Error getting transaction by hash",
-                    extra={
-                        "txHash": tx_hash
-                    }
-                )
-                return []
-
-            calldata = tx["input"]
-            with open("abis/IncredibleSquaringTaskManager.json") as f:
-                task_manager_abi = json.load(f)
-            
-            method_sig = calldata[:10]  # First 4 bytes (8 hex chars) + 0x
-            method = None
-            for abi_item in task_manager_abi:
-                if abi_item["type"] == "function":
-                    # Get the function signature
-                    inputs = ",".join([input["type"] for input in abi_item["inputs"]])
-                    sig = f"{abi_item['name']}({inputs})"
-                    if Web3.keccak(text=sig)[:4].hex() == method_sig[2:]:
-                        method = abi_item
-                        break
-
-            if not method:
-                self.logger.error("Error getting method")
-                return []
-
-            inputs = eth_abi.decode(method["inputs"], bytes.fromhex(calldata[10:]))
-            non_signer_stakes_and_signature_input = inputs[2]  # Assuming this is the third parameter
-
-            # Get pubkeys of non-signing operators
-            non_signing_operator_pub_keys = []
-            for pubkey in non_signer_stakes_and_signature_input["nonSignerPubkeys"]:
-                non_signing_operator_pub_keys.append({
-                    "X": pubkey["X"],
-                    "Y": pubkey["Y"]
-                })
-
-            return non_signing_operator_pub_keys
-
-        except Exception as e:
-            self.logger.error(f"Error getting non-signing operator pubkeys: {str(e)}")
-            return []
+        return []
 
     def raise_challenge(self, task_index: int) -> None:
         """Raise a challenge for a given task."""
@@ -255,12 +204,21 @@ class Challenger:
         )
 
         try:
-            receipt = self.avs_writer.raise_challenge(
+            tx = self.task_manager.functions.raiseAndResolveChallenge(
                 self.tasks[task_index],
                 self.task_responses[task_index].task_response,
                 self.task_responses[task_index].task_response_metadata,
                 self.task_responses[task_index].non_signing_operator_pub_keys
-            )
+            ).build_transaction({
+                "from": self.challenger_address,
+                "gas": 2000000,
+                "gasPrice": self.web3.to_wei("20", "gwei"),
+                "nonce": self.web3.eth.get_transaction_count(self.challenger_address),
+                "chainId": self.web3.eth.chain_id,
+            })
+            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
+            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
             self.logger.info("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
         except Exception as e:
             self.logger.error(f"Challenger failed to raise challenge: {str(e)}")

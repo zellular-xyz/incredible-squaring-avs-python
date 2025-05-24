@@ -2,7 +2,6 @@ import os
 import time
 import json
 import logging
-from random import randbytes
 import requests
 import yaml
 from web3 import Web3
@@ -11,9 +10,6 @@ from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
 from eigensdk._types import Operator
-
-AVS_NAME = "incredible-squaring"
-SEM_VER = "0.0.1"
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -122,28 +118,6 @@ class SquaringOperator:
             logger.info("Modified allocations successfully")
         except Exception as e:
             logger.error(f"Error modifying allocations: {str(e)}")
-
-    def register(self):
-        """Register the operator with EigenLayer and the AVS"""
-        logger.info("Registering operator")
-        operator = Operator(
-            address=self.config["operator_address"],
-            earnings_receiver_address=self.config["operator_address"],
-            delegation_approver_address="0x0000000000000000000000000000000000000000",
-            allocation_delay=100,
-            staker_opt_out_window_blocks=0,
-            metadata_url="",
-        )
-        self.clients.el_writer.register_as_operator(operator)
-        self.clients.avs_registry_writer.register_operator_in_quorum_with_avs_registry_coordinator(
-            operator_ecdsa_private_key=self.operator_ecdsa_private_key,
-            operator_to_avs_registration_sig_salt=randbytes(32),
-            operator_to_avs_registration_sig_expiry=int(time.time()) + 3600,
-            bls_key_pair=self.bls_key_pair,
-            quorum_numbers=[0],
-            socket="operator-socket",
-        )
-        logger.info("Registration complete")
 
     def start(self):
         """Start the operator service"""
@@ -326,16 +300,12 @@ class SquaringOperator:
 
     def modify_allocations(self, strategies, new_magnitudes, operator_set_id):
         """Modify allocations for the operator"""
-        if not hasattr(self.clients, 'allocation_writer'):
-            logger.error("Allocation writer not available")
-            return
-            
         avs_service_manager = self.config.get("service_manager_address")
         if not avs_service_manager:
             logger.error("Service manager address not configured")
             return
             
-        self.clients.allocation_writer.modify_allocations(
+        self.clients.el_writer.modify_allocations(
             Web3.to_checksum_address(self.config["operator_address"]),
             avs_service_manager,
             operator_set_id,
@@ -345,61 +315,11 @@ class SquaringOperator:
 
     def set_allocation_delay(self, delay):
         """Set allocation delay for the operator"""
-        if not hasattr(self.clients, 'allocation_writer'):
-            logger.error("Allocation writer not available")
-            return
-            
-        self.clients.allocation_writer.set_allocation_delay(
+        self.clients.el_writer.set_allocation_delay(
             Web3.to_checksum_address(self.config["operator_address"]),
             delay
         )
 
-    def create_total_delegated_stake_quorum(
-        self,
-        max_operator_count=100,
-        kick_bips_operator_stake=100,
-        kick_bips_total_stake=100,
-        minimum_stake=1000000,
-        multiplier=1
-    ):
-        """Create a total delegated stake quorum"""
-        if not hasattr(self.clients, 'avs_registry_writer'):
-            logger.error("AVS registry writer not available")
-            return
-
-        operator_set_params = (
-            max_operator_count,          # uint32
-            kick_bips_operator_stake,    # uint16
-            kick_bips_total_stake        # uint16
-        )
-
-        strategy_addr = Web3.to_checksum_address(self.config.get("token_strategy_addr"))
-        strategy_params = [(strategy_addr, multiplier)]
-
-        self.clients.avs_registry_writer.create_total_delegated_stake_quorum(
-            operator_set_params,
-            minimum_stake,
-            strategy_params
-        )
-
-    
-    def print_operator_status(self):
-        """Print the status of the operator"""
-        status = {
-            "ecdsa_address": self.config["operator_address"],
-            "pubkeys_registered": self.operator_id is not None,
-            "g1_pubkey": self.bls_key_pair.pub_g1.getStr() if self.bls_key_pair else None,
-            "g2_pubkey": self.bls_key_pair.pub_g2.getStr() if self.bls_key_pair else None,
-            "registered_with_avs": self.operator_id is not None,
-            "operator_id": self.operator_id.hex() if self.operator_id else None
-        }
-        logger.info(f"Operator status: {json.dumps(status, indent=2)}")
-        return status
-
-    def set_appointee(self):
-        """Set appointee for the operator - not typically needed for normal operation"""
-        pass
-        
     def __load_bls_key(self):
         """Load the BLS key pair"""
         try:

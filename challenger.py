@@ -1,6 +1,5 @@
 from typing import Dict, List, Optional
 from dataclasses import dataclass
-from decimal import Decimal
 import logging
 import json
 import os
@@ -8,6 +7,10 @@ from web3 import Web3
 import eth_abi
 from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
+import yaml
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @dataclass
 class Task:
@@ -27,6 +30,10 @@ class TaskResponseData:
 # Define specific error types
 class ChallengerError(Exception):
     """Base class for all challenger errors."""
+    pass
+
+class KeyLoadError(ChallengerError):
+    """Key load error."""
     pass
 
 class TaskNotFoundError(ChallengerError):
@@ -187,7 +194,7 @@ class Challenger:
         # Get the nonSignerStakesAndSignature
         tx_hash = v_log["transactionHash"]
         try:
-            tx = self.eth_client.eth.get_transaction(tx_hash)
+            tx = self.eth_http_client.eth.get_transaction(tx_hash)
             if not tx:
                 self.logger.error(
                     "Error getting transaction by hash",
@@ -257,20 +264,24 @@ class Challenger:
             raise TransactionError()
 
     def __load_ecdsa_key(self):
-        """Load the ECDSA private key."""
-        ecdsa_key_password = os.environ.get("CHALLENGER_ECDSA_KEY_PASSWORD", "")
-        if not ecdsa_key_password:
-            self.logger.warning("CHALLENGER_ECDSA_KEY_PASSWORD not set. using empty string.")
-
+        """Load the ECDSA private key"""
         try:
+            ecdsa_key_password = os.environ.get("CHALLENGER_ECDSA_KEY_PASSWORD", "")
+            if not ecdsa_key_password:
+                logger.warning("CHALLENGER_ECDSA_KEY_PASSWORD not set. using empty string.")
+
+            if not os.path.exists(self.config["ecdsa_private_key_store_path"]):
+                logger.error(f"ECDSA key file not found at: {self.config['ecdsa_private_key_store_path']}")
+                raise KeyLoadError(f"ECDSA key file not found")
+
             with open(self.config["ecdsa_private_key_store_path"], "r") as f:
                 keystore = json.load(f)
             self.challenger_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
             self.challenger_address = Account.from_key(self.challenger_ecdsa_private_key).address
-            self.logger.info(f"Loaded ECDSA key for address: {self.challenger_address}")
+            logger.info(f"Loaded ECDSA key for address: {self.challenger_address}")
         except Exception as e:
-            self.logger.error(f"Failed to load ECDSA key: {str(e)}")
-            raise
+            logger.error(f"Failed to load ECDSA key: {str(e)}")
+            raise KeyLoadError(f"Failed to load ECDSA key: {str(e)}")
 
     def __load_clients(self):
         """Load the AVS clients."""
@@ -289,10 +300,11 @@ class Challenger:
                 prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
             )
             self.clients = build_all(cfg, self.challenger_ecdsa_private_key)
-            self.avs_reader = self.clients.avs_reader
-            self.avs_writer = self.clients.avs_writer
-            self.avs_subscriber = self.clients.avs_subscriber
-            self.eth_client = self.clients.eth_client
+            self.avs_registry_reader = self.clients.avs_registry_reader
+            self.avs_registry_writer = self.clients.avs_registry_writer
+            self.el_reader = self.clients.el_reader
+            self.el_writer = self.clients.el_writer
+            self.eth_http_client = self.clients.eth_http_client
             self.logger.info("Successfully loaded AVS clients")
         except Exception as e:
             self.logger.error(f"Failed to load AVS clients: {str(e)}")
@@ -304,7 +316,7 @@ class Challenger:
             service_manager_address = self.clients.avs_registry_writer.service_manager_addr
             with open("abis/IncredibleSquaringServiceManager.json") as f:
                 service_manager_abi = f.read()
-            service_manager = self.eth_client.eth.contract(
+            service_manager = self.eth_http_client.eth.contract(
                 address=service_manager_address, abi=service_manager_abi
             )
 
@@ -313,8 +325,24 @@ class Challenger:
             )
             with open("abis/IncredibleSquaringTaskManager.json") as f:
                 task_manager_abi = f.read()
-            self.task_manager = self.eth_client.eth.contract(address=task_manager_address, abi=task_manager_abi)
+            self.task_manager = self.eth_http_client.eth.contract(address=task_manager_address, abi=task_manager_abi)
             self.logger.info(f"Task manager loaded at address: {task_manager_address}")
         except Exception as e:
             self.logger.error(f"Failed to load task manager: {str(e)}")
             raise
+
+
+if __name__ == '__main__':
+    try:
+        config_path = "config-files/challenger.yaml"
+        if not os.path.exists(config_path):
+            logger.error(f"Config file not found at: {config_path}")
+            raise FileNotFoundError(f"Config file not found at: {config_path}")
+            
+        with open(config_path, "r") as f:
+            config = yaml.load(f, Loader=yaml.BaseLoader)
+            
+        challenger = Challenger(config)
+        challenger.start(None)
+    except Exception as e:
+        logger.error(f"Error in challenger: {str(e)}")

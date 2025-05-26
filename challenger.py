@@ -3,8 +3,6 @@ from dataclasses import dataclass
 import logging
 import json
 import os
-from web3 import Web3
-import eth_abi
 from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 import yaml
@@ -16,16 +14,44 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Task:
     number_to_be_squared: int
+    task_created_block: int
+    quorum_numbers: bytes
+    quorum_threshold_percentage: int
+
+    def to_tuple(self):
+        return (
+            self.number_to_be_squared,
+            self.task_created_block,
+            self.quorum_numbers,
+            self.quorum_threshold_percentage
+        )
 
 @dataclass
 class TaskResponse:
     number_squared: int
     reference_task_index: int
 
+    def to_tuple(self):
+        return (
+            self.reference_task_index,
+            self.number_squared
+        )
+
+@dataclass
+class TaskResponseMetadata:
+    task_responsed_block: int
+    hash_of_non_signers: bytes
+
+    def to_tuple(self):
+        return (
+            self.task_responsed_block,
+            self.hash_of_non_signers
+        )
+
 @dataclass
 class TaskResponseData:
     task_response: TaskResponse
-    task_response_metadata: dict
+    task_response_metadata: TaskResponseMetadata
     non_signing_operator_pub_keys: List[dict]
 
 # Define specific error types
@@ -135,7 +161,12 @@ class Challenger:
     def process_new_task_created_log(self, new_task_created_log) -> int:
         """Process new task creation log."""
         task_index = new_task_created_log["args"]["taskIndex"]
-        task = Task(number_to_be_squared=new_task_created_log["args"]["task"]["numberToBeSquared"])
+        task = Task(
+            number_to_be_squared=new_task_created_log["args"]["task"]["numberToBeSquared"],
+            task_created_block=new_task_created_log["args"]["task"]["taskCreatedBlock"],
+            quorum_numbers=new_task_created_log["args"]["task"]["quorumNumbers"],
+            quorum_threshold_percentage=new_task_created_log["args"]["task"]["quorumThresholdPercentage"]
+        )
         self.tasks[task_index] = task
         self.logger.debug(f"Processed new task {task_index} with number to be squared: {task.number_to_be_squared}")
         return task_index
@@ -148,9 +179,13 @@ class Challenger:
             number_squared=task_response_log["args"]["taskResponse"]["numberSquared"],
             reference_task_index=task_response_log["args"]["taskResponse"]["referenceTaskIndex"]
         )
+        task_response_metadata = TaskResponseMetadata(
+            task_responsed_block=task_response_log["args"]["taskResponseMetadata"]["taskResponsedBlock"],
+            hash_of_non_signers=task_response_log["args"]["taskResponseMetadata"]["hashOfNonSigners"]
+        )
         task_response_data = TaskResponseData(
             task_response=task_response,
-            task_response_metadata=task_response_log["args"]["taskResponseMetadata"],
+            task_response_metadata=task_response_metadata,
             non_signing_operator_pub_keys=non_signing_operator_pub_keys
         )
 
@@ -205,20 +240,20 @@ class Challenger:
 
         try:
             tx = self.task_manager.functions.raiseAndResolveChallenge(
-                self.tasks[task_index],
-                self.task_responses[task_index].task_response,
-                self.task_responses[task_index].task_response_metadata,
+                self.tasks[task_index].to_tuple(),
+                self.task_responses[task_index].task_response.to_tuple(),
+                self.task_responses[task_index].task_response_metadata.to_tuple(),
                 self.task_responses[task_index].non_signing_operator_pub_keys
             ).build_transaction({
                 "from": self.challenger_address,
                 "gas": 2000000,
-                "gasPrice": self.web3.to_wei("20", "gwei"),
-                "nonce": self.web3.eth.get_transaction_count(self.challenger_address),
-                "chainId": self.web3.eth.chain_id,
+                "gasPrice": self.eth_http_client.to_wei("20", "gwei"),
+                "nonce": self.eth_http_client.eth.get_transaction_count(self.challenger_address),
+                "chainId": self.eth_http_client.eth.chain_id,
             })
-            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
-            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+            signed_tx = self.eth_http_client.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
+            tx_hash = self.eth_http_client.eth.send_raw_transaction(signed_tx.raw_transaction)
+            receipt = self.eth_http_client.eth.wait_for_transaction_receipt(tx_hash)
             self.logger.info("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
         except Exception as e:
             self.logger.error(f"Challenger failed to raise challenge: {str(e)}")

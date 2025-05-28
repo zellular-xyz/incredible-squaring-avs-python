@@ -221,12 +221,20 @@ class Challenger:
             self.logger.info("The number squared is correct")
             raise NoErrorInTaskResponse()
 
-    # TODO: For simplicty it just returns an empty list for now
-    # TODO: This should be implemented to return the public keys of the non-signing operators obtained from the task response metadata
-    def get_non_signing_operator_pub_keys(self, v_log) -> List[dict]:
+    def get_non_signing_operator_pub_keys(self, task_response_log) -> List[dict]:
         """Get public keys of non-signing operators."""
-        # Get the nonSignerStakesAndSignature
-        return []
+        tx = self.eth_http_client.eth.get_transaction(task_response_log["transactionHash"])
+        input_data = tx.input
+        func_obj, func_params = self.task_manager.decode_function_input(input_data)
+        non_signer_pubkeys = func_params['nonSignerStakesAndSignature']['nonSignerPubkeys']
+        result = []
+        for pubkey in non_signer_pubkeys:
+            key_dict = {
+                "X": pubkey['X'],
+                "Y": pubkey['Y']
+            }
+            result.append(key_dict)
+        return result
 
     def raise_challenge(self, task_index: int) -> None:
         """Raise a challenge for a given task."""

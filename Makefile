@@ -45,4 +45,3 @@ start-aggregator: ##
 
 start-operator: ## 
 	python squaring_operator.py
-

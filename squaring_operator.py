@@ -4,40 +4,18 @@ import json
 import logging
 import requests
 import yaml
+from challenger import KeyLoadError
 from web3 import Web3
 import eth_abi
 from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
 from eigensdk._types import Operator
+from eth_typing import Address
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Define specific error types
-class OperatorError(Exception):
-    """Base class for all operator errors."""
-    pass
-
-class KeyLoadError(OperatorError):
-    """Error loading keys."""
-    pass
-
-class ClientInitializationError(OperatorError):
-    """Error initializing clients."""
-    pass
-
-class RegistrationError(OperatorError):
-    """Error in operator registration."""
-    pass
-
-class TaskProcessingError(OperatorError):
-    """Error processing task."""
-    pass
-
-class AggregatorCommunicationError(OperatorError):
-    """Error communicating with aggregator."""
-    pass
 
 class SquaringOperator:
     def __init__(self, config):
@@ -63,9 +41,6 @@ class SquaringOperator:
             # operator id can only be loaded after registration
             self.__load_operator_id()
             logger.info("Operator initialized successfully")
-        except OperatorError as e:
-            logger.error(f"Operator initialization failed: {str(e)}")
-            raise
         except Exception as e:
             logger.error(f"Unexpected error during operator initialization: {str(e)}")
             raise
@@ -85,10 +60,6 @@ class SquaringOperator:
         amount = int(1e21)  # 1000 tokens with 18 decimals
         try:
             strategy_addr = self.config.get("token_strategy_addr")
-            if not strategy_addr:
-                logger.error("Token strategy address not configured")
-                raise RegistrationError("Token strategy address not configured")
-                
             self.deposit_into_strategy(strategy_addr, amount)
             logger.info(f"Deposited {amount} into strategy {strategy_addr}")
         except Exception as e:
@@ -123,10 +94,6 @@ class SquaringOperator:
         """Start the operator service"""
         logger.info("Starting Operator...")
         
-        if not self.operator_id:
-            logger.error("Operator ID not loaded, cannot start operator")
-            raise OperatorError("Operator not registered properly")
-            
         event_filter = self.task_manager.events.NewTaskCreated.create_filter(
             from_block="latest"
         )
@@ -140,16 +107,13 @@ class SquaringOperator:
                         task_response = self.process_task_event(event)
                         signed_response = self.sign_task_response(task_response)
                         self.send_signed_task_response(signed_response)
-                    except TaskProcessingError as e:
-                        logger.error(f"Error processing task: {str(e)}")
-                    except AggregatorCommunicationError as e:
-                        logger.error(f"Error communicating with aggregator: {str(e)}")
                     except Exception as e:
                         logger.error(f"Unexpected error handling task: {str(e)}")
+
                 time.sleep(3)
             except Exception as e:
                 logger.error(f"Error in event processing loop: {str(e)}")
-                time.sleep(5)  # Wait a bit longer on error before retrying
+                time.sleep(5)  
 
     def process_task_event(self, event):
         """Process a new task event and generate a task response"""
@@ -183,7 +147,6 @@ class SquaringOperator:
             return task_response
         except Exception as e:
             logger.error(f"Error processing task event: {str(e)}")
-            raise TaskProcessingError(f"Failed to process task: {str(e)}")
 
     def sign_task_response(self, task_response):
         """Sign a task response with the operator's BLS key"""
@@ -209,7 +172,6 @@ class SquaringOperator:
             return signed_response
         except Exception as e:
             logger.error(f"Error signing task response: {str(e)}")
-            raise TaskProcessingError(f"Failed to sign task response: {str(e)}")
 
     def send_signed_task_response(self, signed_response):
         """Send a signed task response to the aggregator"""
@@ -231,15 +193,10 @@ class SquaringOperator:
             response = requests.post(url, json=data)
             response.raise_for_status()
             logger.info(f"Successfully sent task response to aggregator, response: {response.text}")
-        except requests.RequestException as e:
-            logger.error(f"Failed to send task response to aggregator: {str(e)}")
-            raise AggregatorCommunicationError(f"Failed to communicate with aggregator: {str(e)}")
         except Exception as e:
             logger.error(f"Unknown error sending task response: {str(e)}")
-            raise
 
     def register_operator_with_eigenlayer(self):
-        """Register the operator with EigenLayer"""
         operator = Operator(
             address=self.config["operator_address"],
             earnings_receiver_address=self.config["operator_address"],
@@ -248,41 +205,11 @@ class SquaringOperator:
             staker_opt_out_window_blocks=0,
             metadata_url="",
         )
-        self.clients.el_writer.register_as_operator(operator)
+        receipt = self.clients.el_writer.register_as_operator(operator)
+        return receipt
 
     def deposit_into_strategy(self, strategy_addr, amount):
-        """Deposit tokens into a strategy"""
-        try:
-            # Get token address for the strategy
-            token_addr = self.clients.el_reader.get_strategy_and_underlying_token(self.web3.to_checksum_address(strategy_addr))
-            
-            # Mint tokens to the operator
-            erc20_contract = self.web3.eth.contract(
-                address=Web3.to_checksum_address(token_addr[1]),
-                abi=self.__get_erc20_abi()
-            )
-            
-            tx = erc20_contract.functions.mint(
-                self.config["operator_address"], 
-                amount
-            ).build_transaction({
-                'from': self.config["operator_address"],
-                'gas': 2000000,
-                'gasPrice': self.web3.to_wei('20', 'gwei'),
-                'nonce': self.web3.eth.get_transaction_count(self.config["operator_address"]),
-            })
-            
-            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.operator_ecdsa_private_key)
-            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-            logger.info(f"Successfully minted tokens, txHash: {receipt['transactionHash'].hex()}")
-            
-            # Deposit into strategy
-            self.clients.el_writer.deposit_erc20_into_strategy(strategy_addr, amount)
-            logger.info(f"Successfully deposited {amount} into strategy {strategy_addr}")
-        except Exception as e:
-            logger.error(f"Error in deposit_into_strategy: {str(e)}")
-            raise
+        receipt = self.clients.el_writer.deposit_erc20_into_strategy(strategy_addr, amount)
 
     def register_for_operator_sets(self, operator_set_ids):
         """Register the operator for operator sets"""
@@ -298,6 +225,13 @@ class SquaringOperator:
             request
         )
 
+    def deregister_from_operator_sets(self, operator_set_ids):
+        request = {
+            "avs_address": self.config["service_manager_address"],
+            "operator_set_ids": operator_set_ids,
+        }
+        receipt = self.clients.el_writer.deregister_from_operator_sets(self.operator_address, request)
+        return receipt
     def modify_allocations(self, strategies, new_magnitudes, operator_set_id):
         """Modify allocations for the operator"""
         avs_service_manager = self.config.get("service_manager_address")
@@ -320,6 +254,33 @@ class SquaringOperator:
             delay
         )
 
+    def set_appointee(self, account_address: Address, appointee_address: Address, target: Address, selector: str):
+        """Set the appointee for the operator"""
+        self.clients.el_writer.set_permission(
+            {
+                "account_address": account_address,
+                "appointee_address": appointee_address,
+                "target": target,
+                "selector": selector,
+            }
+        )
+    
+    def create_total_delegated_stake_quorum(self, operator_set_params, minimum_stake_required, strategy_params):
+        """Create a total delegated stake quorum for the operator
+        
+        Args:
+            operator_set_params: Tuple of (MaxOperatorCount, KickBIPsOfOperatorStake, KickBIPsOfTotalStake)
+            minimum_stake_required: Minimum stake required for the quorum
+            strategy_params: List of tuples (strategy_address, weight)
+        """
+        receipt = self.clients.avs_registry_writer.create_total_delegated_stake_quorum(
+            operator_set_params, 
+            minimum_stake_required, 
+            strategy_params
+        )
+        return receipt
+
+    
     def __load_bls_key(self):
         """Load the BLS key pair"""
         try:
@@ -380,7 +341,6 @@ class SquaringOperator:
             logger.info("Successfully loaded AVS clients")
         except Exception as e:
             logger.error(f"Failed to load AVS clients: {str(e)}")
-            raise ClientInitializationError(f"Failed to load AVS clients: {str(e)}")
 
     def __load_task_manager(self):
         """Load the task manager contract"""
@@ -390,7 +350,6 @@ class SquaringOperator:
             service_manager_abi_path = "abis/IncredibleSquaringServiceManager.json"
             if not os.path.exists(service_manager_abi_path):
                 logger.error(f"Service manager ABI file not found at: {service_manager_abi_path}")
-                raise ClientInitializationError(f"Service manager ABI file not found")
                 
             with open(service_manager_abi_path) as f:
                 service_manager_abi = f.read()
@@ -406,7 +365,6 @@ class SquaringOperator:
             task_manager_abi_path = "abis/IncredibleSquaringTaskManager.json"
             if not os.path.exists(task_manager_abi_path):
                 logger.error(f"Task manager ABI file not found at: {task_manager_abi_path}")
-                raise ClientInitializationError(f"Task manager ABI file not found")
                 
             with open(task_manager_abi_path) as f:
                 task_manager_abi = f.read()
@@ -415,7 +373,6 @@ class SquaringOperator:
             logger.info(f"Task manager loaded at address: {task_manager_address}")
         except Exception as e:
             logger.error(f"Failed to load task manager: {str(e)}")
-            raise ClientInitializationError(f"Failed to load task manager: {str(e)}")
 
     def __load_operator_id(self):
         """Load the operator ID"""
@@ -428,21 +385,6 @@ class SquaringOperator:
             logger.error(f"Failed to load operator ID: {str(e)}")
             self.operator_id = None
 
-    def __get_erc20_abi(self):
-        """Get the ERC20 ABI for interacting with tokens"""
-        # Simplified ABI with just the mint function
-        return [
-            {
-                "inputs": [
-                    {"internalType": "address", "name": "to", "type": "address"},
-                    {"internalType": "uint256", "name": "amount", "type": "uint256"}
-                ],
-                "name": "mint",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }
-        ]
 
 if __name__ == "__main__":
     try:

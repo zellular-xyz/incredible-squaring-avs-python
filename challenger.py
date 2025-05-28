@@ -135,6 +135,7 @@ class Challenger:
 
                 # Handle task response events
                 for event in task_response_sub.get_new_entries():
+                    print("event",event,"\n\n\n")
                     self.logger.info("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
                     try:
                         task_index = self.process_task_response_log(event)

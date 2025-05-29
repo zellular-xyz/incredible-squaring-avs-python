@@ -9,12 +9,9 @@ import eth_abi
 from eth_account import Account
 from flask import Flask, request, jsonify
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
-from eigensdk.services.avsregistry.avsregistry import AvsRegistryService
-from eigensdk.services.operatorsinfo.operatorsinfo_inmemory import OperatorsInfoServiceInMemory
-from eigensdk.services.bls_aggregation.blsagg import BlsAggregationService, BlsAggregationServiceResponse
 from eigensdk.chainio.utils import nums_to_bytes
 from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tupple, g2_to_tupple, new_zero_g1_point, new_zero_g2_point
-
+import requests
 
 TASK_CHALLENGE_WINDOW_BLOCK = 100
 BLOCK_TIME_SECONDS = 12
@@ -67,37 +64,7 @@ class Aggregator:
         self.app.add_url_rule('/signature', 'signature', self.submit_signature, methods=['POST'])
         self.subgraph_url = "http://localhost:8000/subgraphs/name/avs-subgraph"
 
-        # Initialize BLS aggregation service
-        self.operator_info_service = OperatorsInfoServiceInMemory(
-            avs_registry_reader=self.clients.avs_registry_reader,
-            logger=logger
-        )
-
-        self.avs_registry_service = AvsRegistryService(
-            avs_registry_reader=self.clients.avs_registry_reader,
-            operator_info_service=self.operator_info_service,
-            logger=logger
-        )
-
-        # Define hash function for task responses
-        def hash_function(task_response):
-            # The order here has to match the field ordering of the task response struct
-            task_response_type = {
-                "referenceTaskIndex": "uint32",
-                "numberSquared": "uint256"
-            }
-            encoded = eth_abi.encode(
-                ["uint32", "uint256"],
-                [task_response["referenceTaskIndex"], task_response["numberSquared"]]
-            )
-            return Web3.keccak(encoded)
-
-        self.bls_aggregation_service = BlsAggregationService(
-            avs_registry_service=self.avs_registry_service,
-            hash_function=hash_function,
-        )
-
-    def start(self, context):
+    def start(self):
         """Start the aggregator service."""
         logger.info("Starting aggregator.")
         logger.info("Starting aggregator rpc server.")
@@ -112,70 +79,7 @@ class Aggregator:
         task_thread.daemon = True
         task_thread.start()
 
-        # Main event loop
-        while True:
-            try:
-                # Handle BLS aggregation service responses
-                for bls_agg_service_resp in self.bls_aggregation_service.get_aggregated_responses():
-                    if bls_agg_service_resp:
-                        logger.info("Received response from blsAggregationService", extra={"blsAggServiceResp": bls_agg_service_resp})
-                        self.send_aggregated_response_to_contract(bls_agg_service_resp)
-            except Exception as e:
-                logger.error(f"Error in event processing: {str(e)}")
-                time.sleep(1)
-
-    def send_aggregated_response_to_contract(self, bls_agg_service_resp: BlsAggregationServiceResponse):
-        """Send aggregated response to the contract."""
-        # Convert non-signer pubkeys to BN254G1Point format
-        non_signer_pubkeys = []
-        for pubkey in bls_agg_service_resp.non_signers_pubkeys_g1:
-            non_signer_pubkeys.append(g1_to_tupple(pubkey))
-
-        # Convert quorum APKs to BN254G1Point format
-        quorum_apks = []
-        for apk in bls_agg_service_resp.quorum_apks_g1:
-            quorum_apks.append(g1_to_tupple(apk))
-
-        # Prepare non-signer stakes and signature
-        non_signer_stakes_and_signature = [
-            bls_agg_service_resp.non_signer_quorum_bitmap_indices,
-            non_signer_pubkeys,
-            quorum_apks,
-            g2_to_tupple(bls_agg_service_resp.signers_apk_g2),
-            g1_to_tupple(bls_agg_service_resp.signers_agg_sig_g1),
-            bls_agg_service_resp.quorum_apk_indices,
-            bls_agg_service_resp.total_stake_indices,
-            bls_agg_service_resp.non_signer_stake_indices
-        ]
-
-        logger.info("Threshold reached. Sending aggregated response onchain.",
-                   extra={"taskIndex": bls_agg_service_resp.task_index})
-
-        try:
-            task = self.tasks[bls_agg_service_resp.task_index]
-            task_response = [
-                bls_agg_service_resp.task_response["referenceTaskIndex"],
-                bls_agg_service_resp.task_response["numberSquared"]
-            ]
-
-            tx = self.task_manager.functions.respondToTask(
-                task, task_response, non_signer_stakes_and_signature
-            ).build_transaction({
-                "from": self.aggregator_address,
-                "gas": 2000000,
-                "gasPrice": self.web3.to_wei("20", "gwei"),
-                "nonce": self.web3.eth.get_transaction_count(self.aggregator_address),
-                "chainId": self.web3.eth.chain_id,
-            })
-
-            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
-            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-            logger.info("Response sent successfully", extra={"txHash": receipt["transactionHash"].hex()})
-
-        except Exception as e:
-            logger.error(f"Aggregator failed to respond to task: {str(e)}")
-            raise
+        return [server_thread, task_thread]
 
     def send_new_task(self, num_to_square):
         """Send a new task to the task manager contract."""
@@ -202,19 +106,6 @@ class Aggregator:
 
             task_index = event['args']['taskIndex']
             self.tasks[task_index] = event['args']['task']
-
-            # Initialize new task in BLS aggregation service
-            quorum_threshold_percentages = [THRESHOLD_PERCENT] * len(event['args']['task']['quorumNumbers'])
-            task_time_to_expiry = TASK_CHALLENGE_WINDOW_BLOCK * BLOCK_TIME_SECONDS
-            quorum_nums = [0]  # Currently only using quorum 0
-
-            self.bls_aggregation_service.initialize_new_task(
-                task_index,
-                event['args']['task']['taskCreatedBlock'],
-                quorum_nums,
-                quorum_threshold_percentages,
-                task_time_to_expiry
-            )
 
             logger.info(f"Successfully sent the new task {task_index}")
             return task_index
@@ -256,7 +147,7 @@ class Aggregator:
             if task_index not in self.tasks:
                 raise TaskNotFoundError()
                 
-            operators = self.__operators_info()
+            operators = self.__operators_info(data["block_number"])
             self.__verify_signature(data, operators)
 
             operator_id = data["operator_id"]
@@ -439,20 +330,55 @@ class Aggregator:
             task_manager_abi = f.read()
         self.task_manager = self.web3.eth.contract(address=task_manager_address, abi=task_manager_abi)
 
-    def __operators_info(self):
-        """Get operator information from the subgraph."""
-        results = {}
-        for operator_id, op in self.operator_info_service.pubkey_dict.items():
-            result = {}
-            result["public_key_g1"] = op.g1_pub_key
-            result["public_key_g2"] = op.g2_pub_key
-            result["stake"] = 70
-            results["0x" + operator_id.hex()] = result
-            
-        return results
+    def __operators_info(self, block):
+        query = f"""
+        {{
+            operators(block: {{ number: {block} }}) {{
+                id
+                operatorId
+                socket
+                stake
+                pubkeyG1_X
+                pubkeyG1_Y
+                pubkeyG2_X
+                pubkeyG2_Y
+            }}
+        }}
+        """
+        response = requests.post(
+            self.subgraph_url,
+            headers={"content-type": "application/json"},
+            json={"query": query},
+        )
+        response.raise_for_status()
+
+        try:
+            operators = response.json()["data"]["operators"]
+        except (KeyError, TypeError, ValueError) as e:
+            raise RuntimeError(
+                f"Unexpected response format while parsing operators: "
+                f"{response.text}, error: {e}"
+            )
+
+        for op in operators:
+            op["public_key_g1"] = G1Point(
+                op["pubkeyG1_X"],
+                op["pubkeyG1_Y"],
+            )
+            op["public_key_g2"] = G2Point(
+                op["pubkeyG2_X"][0],
+                op["pubkeyG2_X"][1],
+                op["pubkeyG2_Y"][0],
+                op["pubkeyG2_Y"][1],
+            )
+            op["stake"] = float(op["stake"])
+
+        return {op["operatorId"]: op for op in operators}
 
 if __name__ == '__main__':
     with open("config-files/aggregator.yaml", "r") as f:
         config = yaml.load(f, Loader=yaml.BaseLoader)
     aggregator = Aggregator(config)
-    aggregator.start(None)
+    threads = aggregator.start()
+    for thread in threads:
+        thread.join()

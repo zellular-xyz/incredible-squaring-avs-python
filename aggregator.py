@@ -10,9 +10,6 @@ import eth_abi
 from eth_account import Account
 from flask import Flask, request
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
-from eigensdk.services.avsregistry import AvsRegistryService
-from eigensdk.services.operatorsinfo.operatorsinfo_inmemory import OperatorsInfoServiceInMemory
-from eigensdk.services.bls_aggregation.blsagg import BlsAggregationService, BlsAggregationServiceResponse
 from eigensdk.chainio.utils import nums_to_bytes
 from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tupple, g2_to_tupple, new_zero_g1_point, new_zero_g2_point
 

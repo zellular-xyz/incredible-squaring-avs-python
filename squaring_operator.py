@@ -205,11 +205,10 @@ class SquaringOperator:
             staker_opt_out_window_blocks=0,
             metadata_url="",
         )
-        receipt = self.clients.el_writer.register_as_operator(operator)
-        return receipt
+        return self.clients.el_writer.register_as_operator(operator)
 
     def deposit_into_strategy(self, strategy_addr, amount):
-        receipt = self.clients.el_writer.deposit_erc20_into_strategy(strategy_addr, amount)
+        return self.clients.el_writer.deposit_erc20_into_strategy(strategy_addr, amount)
 
     def register_for_operator_sets(self, operator_set_ids):
         """Register the operator for operator sets"""

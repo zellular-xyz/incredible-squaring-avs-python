@@ -2,27 +2,19 @@
 pragma solidity ^0.8.9;
 
 import "@eigenlayer-middleware/src/libraries/BN254.sol";
+import {IStrategy} from "@eigenlayer/contracts/interfaces/IStrategy.sol";
 
 interface IIncredibleSquaringTaskManager {
     // EVENTS
     event NewTaskCreated(uint32 indexed taskIndex, Task task);
 
-    event TaskResponded(
-        TaskResponse taskResponse,
-        TaskResponseMetadata taskResponseMetadata
-    );
+    event TaskResponded(TaskResponse taskResponse, TaskResponseMetadata taskResponseMetadata);
 
     event TaskCompleted(uint32 indexed taskIndex);
 
-    event TaskChallengedSuccessfully(
-        uint32 indexed taskIndex,
-        address indexed challenger
-    );
+    event TaskChallengedSuccessfully(uint32 indexed taskIndex, address indexed challenger);
 
-    event TaskChallengedUnsuccessfully(
-        uint32 indexed taskIndex,
-        address indexed challenger
-    );
+    event TaskChallengedUnsuccessfully(uint32 indexed taskIndex, address indexed challenger);
 
     // STRUCTS
     struct Task {
@@ -51,7 +43,7 @@ interface IIncredibleSquaringTaskManager {
     // It thus cannot be signed by operators, so we keep it in a separate struct than TaskResponse
     // This metadata is needed by the challenger, so we emit it in the TaskResponded event
     struct TaskResponseMetadata {
-        uint32 taskResponsedBlock;
+        uint32 taskRespondedBlock;
         bytes32 hashOfNonSigners;
     }
 

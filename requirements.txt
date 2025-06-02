@@ -1,4 +1,7 @@
--e git+https://github.com/zellular-xyz/eigensdk-python@main#egg=eigensdk
+# Install eigensdk from the if3-dev branch
+-e git+https://github.com/zellular-xyz/eigensdk-python.git@if3-dev#egg=eigensdk
+
+# Other dependencies
 web3==7.4.0
 PyYAML==6.0.1
 Flask==3.0.3

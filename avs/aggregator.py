@@ -65,7 +65,6 @@ class Aggregator:
         self.app.add_url_rule('/signature', 'signature', self.submit_signature, methods=['POST'])
         self.subgraph_url = "http://localhost:8000/subgraphs/name/avs-subgraph"
         self._stop_flag = False
-        self._server = None
 
     def start(self):
         """Start the aggregator service."""
@@ -89,9 +88,6 @@ class Aggregator:
         """Stop the aggregator service."""
         logger.debug("Stopping aggregator.")
         self._stop_flag = True
-        if self._server:
-            self._server.shutdown()
-            logger.debug("Flask server stopped")
 
     def send_new_task(self, num_to_square):
         """Send a new task to the task manager contract."""
@@ -296,7 +292,7 @@ class Aggregator:
     def start_server(self):
         """Start the Flask server."""
         host, port = self.config['aggregator_server_ip_port_address'].split(':')
-        self._server = self.app.run(host=host, port=int(port), use_reloader=False)
+        self.app.run(host=host, port=int(port), use_reloader=False)
 
     def __load_ecdsa_key(self):
         """Load the ECDSA private key."""

@@ -74,3 +74,5 @@ if __name__ == "__main__":
     operator_thread.join()
     anvil_process.terminate()
     print("Cleanup complete")
+    pid = os.getpid()
+    os.kill(pid, 9)

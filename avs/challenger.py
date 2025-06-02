@@ -8,6 +8,7 @@ from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 import yaml
 import time
 
+# change logging level to DEBUG for testing
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -86,7 +87,6 @@ class NoErrorInTaskResponse(ChallengerError):
 class Challenger:
     def __init__(self, config):
         self.config = config
-        self.logger = logging.getLogger(__name__)
         self.__load_ecdsa_key()
         self.__load_clients()
         self.__load_task_manager()
@@ -97,7 +97,7 @@ class Challenger:
 
     def start(self, context) -> None:
         """Start the challenger service."""
-        self.logger.info("Starting Challenger.")
+        logger.debug("Starting Challenger.")
 
         # Subscribe to new tasks
         new_task_sub = self.task_manager.events.NewTaskCreated.create_filter(
@@ -109,12 +109,12 @@ class Challenger:
             from_block="latest"
         )
 
-        logger.info("Listening for new events...")
+        logger.debug("Listening for new events...")
         while True:
             try:
                 # Handle new task created events
                 for event in new_task_sub.get_new_entries():
-                    self.logger.info(
+                    logger.debug(
                         "New task created log received",
                         extra={
                             "taskIndex": event["args"]["taskIndex"],
@@ -127,16 +127,15 @@ class Challenger:
                         try:
                             self.call_challenge_module(task_index)
                         except NoErrorInTaskResponse:
-                            self.logger.info("No error found in task response")
+                            logger.debug("No error found in task response")
                         except ChallengerError as e:
-                            self.logger.error(f"Error in challenge module: {str(e)}")
+                            logger.error(f"Error in challenge module: {str(e)}")
                         except Exception as e:
-                            self.logger.error(f"Unexpected error in challenge module: {str(e)}")
+                            logger.error(f"Unexpected error in challenge module: {str(e)}")
 
                 # Handle task response events
                 for event in task_response_sub.get_new_entries():
-                    print("event",event,"\n\n\n")
-                    self.logger.info("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
+                    logger.debug("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
                     try:
                         task_index = self.process_task_response_log(event)
 
@@ -144,19 +143,19 @@ class Challenger:
                             try:
                                 self.call_challenge_module(task_index)
                             except NoErrorInTaskResponse:
-                                self.logger.info("No error found in task response")
+                                logger.debug("No error found in task response")
                             except ChallengerError as e:
-                                self.logger.error(f"Error in challenge module: {str(e)}")
+                                logger.error(f"Error in challenge module: {str(e)}")
                             except Exception as e:
-                                self.logger.error(f"Unexpected error in challenge module: {str(e)}")
+                                logger.error(f"Unexpected error in challenge module: {str(e)}")
                     except TaskResponseParsingError as e:
-                        self.logger.error(f"Failed to process task response: {str(e)}")
+                        logger.error(f"Failed to process task response: {str(e)}")
                     except Exception as e:
-                        self.logger.error(f"Unexpected error processing task response: {str(e)}")
+                        logger.error(f"Unexpected error processing task response: {str(e)}")
                 time.sleep(3)
 
             except Exception as e:
-                self.logger.error(f"Error in event processing: {str(e)}")
+                logger.error(f"Error in event processing: {str(e)}")
                 time.sleep(5)
 
     def process_new_task_created_log(self, new_task_created_log) -> int:
@@ -169,7 +168,7 @@ class Challenger:
             quorum_threshold_percentage=new_task_created_log["args"]["task"]["quorumThresholdPercentage"]
         )
         self.tasks[task_index] = task
-        self.logger.debug(f"Processed new task {task_index} with number to be squared: {task.number_to_be_squared}")
+        logger.debug(f"Processed new task {task_index} with number to be squared: {task.number_to_be_squared}")
         return task_index
 
     def process_task_response_log(self, task_response_log) -> int:
@@ -192,7 +191,7 @@ class Challenger:
 
         task_index = task_response_log["args"]["taskResponse"]["referenceTaskIndex"]
         self.task_responses[task_index] = task_response_data
-        self.logger.debug(f"Processed task response for task {task_index} with number squared: {task_response.number_squared}")
+        logger.debug(f"Processed task response for task {task_index} with number squared: {task_response.number_squared}")
         return task_index
 
     def call_challenge_module(self, task_index: int) -> Optional[Exception]:
@@ -206,7 +205,7 @@ class Challenger:
 
         # Check if the answer in the response submitted by aggregator is correct
         if true_answer != answer_in_response:
-            self.logger.info(
+            logger.debug(
                 "The number squared is not correct",
                 extra={
                     "expectedAnswer": true_answer,
@@ -218,7 +217,7 @@ class Challenger:
             self.raise_challenge(task_index)
             return None
         else:
-            self.logger.info("The number squared is correct")
+            logger.debug("The number squared is correct")
             raise NoErrorInTaskResponse()
 
     def get_non_signing_operator_pub_keys(self, task_response_log) -> List[dict]:
@@ -238,11 +237,11 @@ class Challenger:
 
     def raise_challenge(self, task_index: int) -> None:
         """Raise a challenge for a given task."""
-        self.logger.info("Challenger raising challenge.", extra={"taskIndex": task_index})
-        self.logger.debug("Task", extra={"Task": self.tasks[task_index]})
-        self.logger.debug("TaskResponse", extra={"TaskResponse": self.task_responses[task_index].task_response})
-        self.logger.debug("TaskResponseMetadata", extra={"TaskResponseMetadata": self.task_responses[task_index].task_response_metadata})
-        self.logger.debug(
+        logger.debug("Challenger raising challenge.", extra={"taskIndex": task_index})
+        logger.debug("Task", extra={"Task": self.tasks[task_index]})
+        logger.debug("TaskResponse", extra={"TaskResponse": self.task_responses[task_index].task_response})
+        logger.debug("TaskResponseMetadata", extra={"TaskResponseMetadata": self.task_responses[task_index].task_response_metadata})
+        logger.debug(
             "NonSigningOperatorPubKeys",
             extra={"NonSigningOperatorPubKeys": self.task_responses[task_index].non_signing_operator_pub_keys}
         )
@@ -263,9 +262,9 @@ class Challenger:
             signed_tx = self.eth_http_client.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
             tx_hash = self.eth_http_client.eth.send_raw_transaction(signed_tx.raw_transaction)
             receipt = self.eth_http_client.eth.wait_for_transaction_receipt(tx_hash)
-            self.logger.info("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
+            logger.debug("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
         except Exception as e:
-            self.logger.error(f"Challenger failed to raise challenge: {str(e)}")
+            logger.error(f"Challenger failed to raise challenge: {str(e)}")
             raise TransactionError()
 
     def __load_ecdsa_key(self):
@@ -283,7 +282,7 @@ class Challenger:
                 keystore = json.load(f)
             self.challenger_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
             self.challenger_address = Account.from_key(self.challenger_ecdsa_private_key).address
-            logger.info(f"Loaded ECDSA key for address: {self.challenger_address}")
+            logger.debug(f"Loaded ECDSA key for address: {self.challenger_address}")
         except Exception as e:
             logger.error(f"Failed to load ECDSA key: {str(e)}")
             raise KeyLoadError(f"Failed to load ECDSA key: {str(e)}")
@@ -310,9 +309,9 @@ class Challenger:
             self.el_reader = self.clients.el_reader
             self.el_writer = self.clients.el_writer
             self.eth_http_client = self.clients.eth_http_client
-            self.logger.info("Successfully loaded AVS clients")
+            logger.debug("Successfully loaded AVS clients")
         except Exception as e:
-            self.logger.error(f"Failed to load AVS clients: {str(e)}")
+            logger.error(f"Failed to load AVS clients: {str(e)}")
             raise
 
     def __load_task_manager(self):
@@ -331,9 +330,9 @@ class Challenger:
             with open("abis/IncredibleSquaringTaskManager.json") as f:
                 task_manager_abi = f.read()
             self.task_manager = self.eth_http_client.eth.contract(address=task_manager_address, abi=task_manager_abi)
-            self.logger.info(f"Task manager loaded at address: {task_manager_address}")
+            logger.debug(f"Task manager loaded at address: {task_manager_address}")
         except Exception as e:
-            self.logger.error(f"Failed to load task manager: {str(e)}")
+            logger.error(f"Failed to load task manager: {str(e)}")
             raise
 
 

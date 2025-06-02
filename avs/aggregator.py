@@ -18,6 +18,10 @@ BLOCK_TIME_SECONDS = 12
 AVS_NAME = "incredible-squaring"
 THRESHOLD_PERCENT = 70
 
+# change logging level to DEBUG for testing
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Define specific error types
 class AggregatorError(Exception):
     """Base class for all aggregator errors."""
@@ -48,9 +52,6 @@ class InternalServerError(AggregatorError):
     def __str__(self):
         return "500. Internal server error"
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 class Aggregator:
     def __init__(self, config):
         self.config = config
@@ -63,11 +64,13 @@ class Aggregator:
         self.app = Flask(__name__)
         self.app.add_url_rule('/signature', 'signature', self.submit_signature, methods=['POST'])
         self.subgraph_url = "http://localhost:8000/subgraphs/name/avs-subgraph"
+        self._stop_flag = False
+        self._server = None
 
     def start(self):
         """Start the aggregator service."""
-        logger.info("Starting aggregator.")
-        logger.info("Starting aggregator rpc server.")
+        logger.debug("Starting aggregator.")
+        logger.debug("Starting aggregator rpc server.")
         
         # Start the server in a separate thread
         server_thread = threading.Thread(target=self.start_server)
@@ -79,11 +82,20 @@ class Aggregator:
         task_thread.daemon = True
         task_thread.start()
 
-        return [server_thread, task_thread]
+        server_thread.join()
+        task_thread.join()
+
+    def stop(self):
+        """Stop the aggregator service."""
+        logger.debug("Stopping aggregator.")
+        self._stop_flag = True
+        if self._server:
+            self._server.shutdown()
+            logger.debug("Flask server stopped")
 
     def send_new_task(self, num_to_square):
         """Send a new task to the task manager contract."""
-        logger.info("Aggregator sending new task", extra={"numberToSquare": num_to_square})
+        logger.debug("Aggregator sending new task", extra={"numberToSquare": num_to_square})
 
         try:
             # Send number to square to the task manager contract
@@ -107,7 +119,7 @@ class Aggregator:
             task_index = event['args']['taskIndex']
             self.tasks[task_index] = event['args']['task']
 
-            logger.info(f"Successfully sent the new task {task_index}")
+            logger.debug(f"Successfully sent the new task {task_index}")
             return task_index
 
         except Exception as e:
@@ -117,8 +129,8 @@ class Aggregator:
     def start_sending_new_tasks(self):
         """Start sending new tasks periodically."""
         task_num = 0
-        while True:
-            logger.info('Sending new task')
+        while not self._stop_flag:
+            logger.debug('Sending new task')
             self.send_new_task(task_num)
             task_num += 1
             time.sleep(10)
@@ -141,13 +153,13 @@ class Aggregator:
         """Handle operator signature submission."""
         try:
             data = request.get_json()
-            logger.info(f"Received signed task response: {data}")
+            logger.debug(f"Received signed task response: {data}")
             
             task_index = data["task_index"]
             if task_index not in self.tasks:
                 raise TaskNotFoundError()
                 
-            operators = self.__operators_info(data["block_number"])
+            operators = self.operators_info(data["block_number"])
             self.__verify_signature(data, operators)
 
             operator_id = data["operator_id"]
@@ -167,7 +179,7 @@ class Aggregator:
             signed_stake = sum(operators[operator_id]["stake"] for operator_id in signer_operator_ids)
             total_stake = sum(operators[operator_id]["stake"] for operator_id in operators)
 
-            logger.info(f"Signature processed successfully", 
+            logger.debug(f"Signature processed successfully", 
                         extra={
                             "taskIndex": task_index, 
                             "operatorId": operator_id,
@@ -239,7 +251,7 @@ class Aggregator:
 
     def __submit_aggregated_response(self, response):
         """Submit aggregated response to the contract."""
-        logger.info(f'Submitting aggregated response to contract', 
+        logger.debug(f'Submitting aggregated response to contract', 
                    extra={"taskIndex": response['task_index']})
                    
         task = [
@@ -276,7 +288,7 @@ class Aggregator:
             signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
             tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-            logger.info("Aggregated response sent successfully", extra={"txHash": receipt["transactionHash"].hex()})
+            logger.debug("Aggregated response sent successfully", extra={"txHash": receipt["transactionHash"].hex()})
         except Exception as e:
             logger.error(f"Failed to submit aggregated response: {str(e)}")
             raise
@@ -284,7 +296,7 @@ class Aggregator:
     def start_server(self):
         """Start the Flask server."""
         host, port = self.config['aggregator_server_ip_port_address'].split(':')
-        self.app.run(host=host, port=int(port))
+        self._server = self.app.run(host=host, port=int(port), use_reloader=False)
 
     def __load_ecdsa_key(self):
         """Load the ECDSA private key."""
@@ -330,7 +342,7 @@ class Aggregator:
             task_manager_abi = f.read()
         self.task_manager = self.web3.eth.contract(address=task_manager_address, abi=task_manager_abi)
 
-    def __operators_info(self, block):
+    def operators_info(self, block):
         query = f"""
         {{
             operators(block: {{ number: {block} }}) {{
@@ -379,6 +391,4 @@ if __name__ == '__main__':
     with open("config-files/aggregator.yaml", "r") as f:
         config = yaml.load(f, Loader=yaml.BaseLoader)
     aggregator = Aggregator(config)
-    threads = aggregator.start()
-    for thread in threads:
-        thread.join()
+    aggregator.start()

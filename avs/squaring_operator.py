@@ -4,7 +4,6 @@ import json
 import logging
 import requests
 import yaml
-from challenger import KeyLoadError
 from web3 import Web3
 import eth_abi
 from eth_account import Account
@@ -13,6 +12,7 @@ from eigensdk.crypto.bls.attestation import KeyPair
 from eigensdk._types import Operator
 from eth_typing import Address
 
+# change logging level to DEBUG for testing
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ class SquaringOperator:
         self.task_manager = None
         self.web3 = None
         self.operator_id = None
+        self._stop_flag = False
         
         try:
             self.__load_bls_key()
@@ -40,18 +41,18 @@ class SquaringOperator:
             
             # operator id can only be loaded after registration
             self.__load_operator_id()
-            logger.info("Operator initialized successfully")
+            logger.debug("Operator initialized successfully")
         except Exception as e:
             logger.error(f"Unexpected error during operator initialization: {str(e)}")
             raise
 
     def register_operator_on_startup(self):
         """Register operator with EigenLayer and AVS on startup"""
-        logger.info("Registering operator on startup")
+        logger.debug("Registering operator on startup")
         
         try:
             self.register_operator_with_eigenlayer()
-            logger.info("Registered operator with eigenlayer")
+            logger.debug("Registered operator with eigenlayer")
         except Exception as e:
             # This might only be that the operator was already registered
             logger.error(f"Error registering operator with eigenlayer: {str(e)}")
@@ -61,7 +62,7 @@ class SquaringOperator:
         try:
             strategy_addr = self.config.get("token_strategy_addr")
             self.deposit_into_strategy(strategy_addr, amount)
-            logger.info(f"Deposited {amount} into strategy {strategy_addr}")
+            logger.debug(f"Deposited {amount} into strategy {strategy_addr}")
         except Exception as e:
             logger.error(f"Error depositing into strategy: {str(e)}")
             raise
@@ -69,7 +70,7 @@ class SquaringOperator:
         # Register for operator sets
         try:
             self.register_for_operator_sets([0])  # Default to quorum 0
-            logger.info("Registered operator with AVS")
+            logger.debug("Registered operator with AVS")
         except Exception as e:
             logger.error(f"Error registering operator with AVS: {str(e)}")
             raise
@@ -77,7 +78,7 @@ class SquaringOperator:
         # Set allocation delay
         try:
             self.set_allocation_delay(0)
-            logger.info("Set allocation delay to 0")
+            logger.debug("Set allocation delay to 0")
         except Exception as e:
             logger.error(f"Error setting allocation delay: {str(e)}")
         
@@ -86,23 +87,28 @@ class SquaringOperator:
             strategies = [self.config.get("token_strategy_addr")]
             new_magnitudes = [100000000]
             self.modify_allocations(strategies, new_magnitudes, 0)
-            logger.info("Modified allocations successfully")
+            logger.debug("Modified allocations successfully")
         except Exception as e:
             logger.error(f"Error modifying allocations: {str(e)}")
 
+    def stop(self):
+        """Stop the operator service"""
+        logger.debug("Stopping Operator...")
+        self._stop_flag = True
+
     def start(self):
         """Start the operator service"""
-        logger.info("Starting Operator...")
+        logger.debug("Starting Operator...")
         
         event_filter = self.task_manager.events.NewTaskCreated.create_filter(
             from_block="latest"
         )
         
-        logger.info("Listening for new tasks...")
-        while True:
+        logger.debug("Listening for new tasks...")
+        while not self._stop_flag:
             try:
                 for event in event_filter.get_new_entries():
-                    logger.info(f"New task created: {event}")
+                    logger.debug(f"New task created: {event}")
                     try:
                         task_response = self.process_task_event(event)
                         signed_response = self.sign_task_response(task_response)
@@ -118,7 +124,7 @@ class SquaringOperator:
     def process_task_event(self, event):
         """Process a new task event and generate a task response"""
         try:
-            logger.info("Processing new task",
+            logger.debug("Processing new task",
                 extra={
                     "numberToBeSquared": event["args"]["task"]["numberToBeSquared"],
                     "taskIndex": event["args"]["taskIndex"],
@@ -137,7 +143,7 @@ class SquaringOperator:
                 import random
                 if random.randint(0, 99) < self.times_failing:
                     number_squared = 908243203843
-                    logger.info("Operator computed wrong task result")
+                    logger.debug("Operator computed wrong task result")
             
             task_response = {
                 "referenceTaskIndex": task_index,
@@ -158,7 +164,7 @@ class SquaringOperator:
             hash_bytes = Web3.keccak(encoded)
             signature = self.bls_key_pair.sign_message(msg_bytes=hash_bytes).to_json()
             
-            logger.info(
+            logger.debug(
                 f"Signature generated, task id: {task_response['referenceTaskIndex']}, "
                 f"number squared: {task_response['numberSquared']}"
             )
@@ -175,7 +181,7 @@ class SquaringOperator:
 
     def send_signed_task_response(self, signed_response):
         """Send a signed task response to the aggregator"""
-        logger.info(f"Submitting task response to aggregator")
+        logger.debug(f"Submitting task response to aggregator")
         
         data = {
             "task_index": signed_response["taskResponse"]["referenceTaskIndex"],
@@ -192,7 +198,7 @@ class SquaringOperator:
             url = f'http://{self.config["aggregator_server_ip_port_address"]}/signature'
             response = requests.post(url, json=data)
             response.raise_for_status()
-            logger.info(f"Successfully sent task response to aggregator, response: {response.text}")
+            logger.debug(f"Successfully sent task response to aggregator, response: {response.text}")
         except Exception as e:
             logger.error(f"Unknown error sending task response: {str(e)}")
 
@@ -289,15 +295,15 @@ class SquaringOperator:
 
             if not os.path.exists(self.config["bls_private_key_store_path"]):
                 logger.error(f"BLS key file not found at: {self.config['bls_private_key_store_path']}")
-                raise KeyLoadError(f"BLS key file not found")
+                raise Exception(f"BLS key file not found")
 
             self.bls_key_pair = KeyPair.read_from_file(
                 self.config["bls_private_key_store_path"], bls_key_password
             )
-            logger.info(f"BLS PubG1: {self.bls_key_pair.pub_g1.getStr()} PubG2: {self.bls_key_pair.pub_g2.getStr()}")
+            logger.debug(f"BLS PubG1: {self.bls_key_pair.pub_g1.getStr()} PubG2: {self.bls_key_pair.pub_g2.getStr()}")
         except Exception as e:
             logger.error(f"Failed to load BLS key: {str(e)}")
-            raise KeyLoadError(f"Failed to load BLS key: {str(e)}")
+            raise Exception(f"Failed to load BLS key: {str(e)}")
 
     def __load_ecdsa_key(self):
         """Load the ECDSA private key"""
@@ -308,16 +314,16 @@ class SquaringOperator:
 
             if not os.path.exists(self.config["ecdsa_private_key_store_path"]):
                 logger.error(f"ECDSA key file not found at: {self.config['ecdsa_private_key_store_path']}")
-                raise KeyLoadError(f"ECDSA key file not found")
+                raise Exception(f"ECDSA key file not found")
 
             with open(self.config["ecdsa_private_key_store_path"], "r") as f:
                 keystore = json.load(f)
             self.operator_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
             self.operator_address = Account.from_key(self.operator_ecdsa_private_key).address
-            logger.info(f"Loaded ECDSA key for address: {self.operator_address}")
+            logger.debug(f"Loaded ECDSA key for address: {self.operator_address}")
         except Exception as e:
             logger.error(f"Failed to load ECDSA key: {str(e)}")
-            raise KeyLoadError(f"Failed to load ECDSA key: {str(e)}")
+            raise Exception(f"Failed to load ECDSA key: {str(e)}")
 
     def __load_clients(self):
         """Load the AVS clients"""
@@ -337,7 +343,7 @@ class SquaringOperator:
             )
             self.clients = build_all(cfg, self.operator_ecdsa_private_key)
             self.web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
-            logger.info("Successfully loaded AVS clients")
+            logger.debug("Successfully loaded AVS clients")
         except Exception as e:
             logger.error(f"Failed to load AVS clients: {str(e)}")
 
@@ -369,7 +375,7 @@ class SquaringOperator:
                 task_manager_abi = f.read()
                 
             self.task_manager = self.web3.eth.contract(address=task_manager_address, abi=task_manager_abi)
-            logger.info(f"Task manager loaded at address: {task_manager_address}")
+            logger.debug(f"Task manager loaded at address: {task_manager_address}")
         except Exception as e:
             logger.error(f"Failed to load task manager: {str(e)}")
 
@@ -379,7 +385,7 @@ class SquaringOperator:
             self.operator_id = self.clients.avs_registry_reader.get_operator_id(
                 self.config["operator_address"]
             )
-            logger.info(f"Loaded operator ID: {self.operator_id.hex() if self.operator_id else None}")
+            logger.debug(f"Loaded operator ID: {self.operator_id.hex() if self.operator_id else None}")
         except Exception as e:
             logger.error(f"Failed to load operator ID: {str(e)}")
             self.operator_id = None

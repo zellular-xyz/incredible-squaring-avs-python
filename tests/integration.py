@@ -11,12 +11,18 @@ from tests.mocks import MockAggregator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def start_anvil_and_deploy_contracts():
     """start anvil and deploy contracts"""
-    anvil_process = subprocess.Popen(["anvil"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    anvil_process = subprocess.Popen(
+        ["anvil"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     time.sleep(1)
-    subprocess.run(["make", "deploy-all"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    subprocess.run(
+        ["make", "deploy-all"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+    )
     return anvil_process
+
 
 def start_operator():
     """start operator"""
@@ -24,7 +30,7 @@ def start_operator():
     if not os.path.exists(config_path):
         logger.error(f"Config file not found at: {config_path}")
         raise FileNotFoundError(f"Config file not found at: {config_path}")
-        
+
     with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.BaseLoader)
 
@@ -32,6 +38,7 @@ def start_operator():
     operator_thread = threading.Thread(target=operator.start)
     operator_thread.start()
     return operator, operator_thread
+
 
 def start_aggregator():
     """start aggregator"""
@@ -41,6 +48,7 @@ def start_aggregator():
     aggregator_thread = threading.Thread(target=aggregator.start)
     aggregator_thread.start()
     return aggregator, aggregator_thread
+
 
 if __name__ == "__main__":
     print("Starting anvil and deploying contracts")
@@ -60,7 +68,7 @@ if __name__ == "__main__":
     task_response_hash = task_manager.functions.allTaskResponses(0).call()
     print("task_hash", task_hash)
     print("task_response_hash", task_response_hash)
-    empty_bytes = b'\x00' * 32
+    empty_bytes = b"\x00" * 32
     if not (task_hash != empty_bytes and task_response_hash != empty_bytes):
         print("task_hash or task_response_hash is empty")
         print("FAILED")

@@ -1,13 +1,12 @@
-import os
-import logging
 import json
-import time
+import logging
+import os
 import threading
-import yaml
-from web3 import Web3
+import time
+
 import eth_abi
-from eth_account import Account
-from flask import Flask, request, jsonify
+import requests
+import yaml
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.chainio.utils import nums_to_bytes
 from eigensdk.crypto.bls.attestation import (
@@ -19,7 +18,9 @@ from eigensdk.crypto.bls.attestation import (
     new_zero_g1_point,
     new_zero_g2_point,
 )
-import requests
+from eth_account import Account
+from flask import Flask, request, jsonify
+from web3 import Web3
 
 TASK_CHALLENGE_WINDOW_BLOCK = 100
 BLOCK_TIME_SECONDS = 12

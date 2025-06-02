@@ -1,12 +1,13 @@
-from typing import Dict, List, Optional
-from dataclasses import dataclass
-import logging
 import json
+import logging
 import os
-from eth_account import Account
-from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
-import yaml
 import time
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+import yaml
+from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
+from eth_account import Account
 
 # change logging level to DEBUG for testing
 logging.basicConfig(level=logging.INFO)

@@ -1,5 +1,5 @@
-from web3 import Web3
 import yaml
+from web3 import Web3
 
 with open("config-files/operator2.anvil.yaml", "r") as f:
     config = yaml.load(f, Loader=yaml.BaseLoader)

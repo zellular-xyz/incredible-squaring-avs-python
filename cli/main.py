@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-import yaml, argparse, sys, logging
-from web3 import Web3
+import argparse
+import logging
+import sys
+import yaml
 from squaring_operator import SquaringOperator
+from web3 import Web3
 
 logger = logging.getLogger(__name__)
 

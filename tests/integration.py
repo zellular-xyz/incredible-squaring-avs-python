@@ -1,9 +1,10 @@
-import subprocess
-import time
-import os
-import yaml
 import logging
+import os
+import subprocess
 import threading
+import time
+
+import yaml
 
 from avs.squaring_operator import SquaringOperator
 from tests.mocks import MockAggregator

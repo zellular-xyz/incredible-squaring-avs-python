@@ -1,16 +1,17 @@
-import os
-import time
 import json
 import logging
+import os
+import time
+
+import eth_abi
 import requests
 import yaml
-from web3 import Web3
-import eth_abi
-from eth_account import Account
+from eigensdk._types import Operator
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
-from eigensdk._types import Operator
+from eth_account import Account
 from eth_typing import Address
+from web3 import Web3
 
 # change logging level to DEBUG for testing
 logging.basicConfig(level=logging.INFO)

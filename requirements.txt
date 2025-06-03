@@ -1,4 +1,3 @@
-# Install eigensdk from the if3-dev branch
 -e git+https://github.com/zellular-xyz/eigensdk-python.git#egg=eigensdk
 
 # Other dependencies

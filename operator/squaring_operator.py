@@ -9,7 +9,7 @@ import eth_abi
 from eth_account import Account
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
-from eigensdk._types import Operator
+from eigensdk.types_ import Operator
 from eth_typing import Address
 
 # change logging level to DEBUG for testing

@@ -6,7 +6,7 @@ import time
 import eth_abi
 import requests
 import yaml
-from eigensdk._types import Operator
+from eigensdk.types_ import Operator
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.crypto.bls.attestation import KeyPair
 from eth_account import Account

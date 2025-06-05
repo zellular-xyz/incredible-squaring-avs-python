@@ -290,9 +290,7 @@ class Challenger:
             permission_controller_addr=self.config["permission_controller_address"],
             service_manager_addr=self.config["service_manager_address"],
             allocation_manager_addr=self.config["allocation_manager_address"],
-            instant_slasher_addr=self.config["instant_slasher_address"],
             delegation_manager_addr=self.config["delegation_manager_address"],
-            prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
         )
         self.clients = build_all(cfg, self.challenger_ecdsa_private_key)
         self.avs_registry_reader = self.clients.avs_registry_reader

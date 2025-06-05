@@ -279,18 +279,6 @@ To add custom validation logic:
 2. Implement additional validation checks
 3. Ensure proper error handling for new scenarios
 
-```python
-def call_challenge_module(self, task_index: int) -> Optional[Exception]:
-    # Existing validation...
-    
-    # Add custom validation
-    if self.custom_validation_check(task_index):
-        self.raise_challenge(task_index)
-        return None
-    
-    # Continue with existing logic...
-```
-
 ## Performance Considerations
 
 - **Event Polling**: Default 3-second interval between event checks

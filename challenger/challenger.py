@@ -111,52 +111,31 @@ class Challenger:
 
         logger.debug("Listening for new events...")
         while True:
-            try:
-                # Handle new task created events
-                for event in new_task_sub.get_new_entries():
-                    logger.debug(
-                        "New task created log received",
-                        extra={
-                            "taskIndex": event["args"]["taskIndex"],
-                            "task": event["args"]["task"]
-                        }
-                    )
-                    task_index = self.process_new_task_created_log(event)
+            # Handle new task created events
+            for event in new_task_sub.get_new_entries():
+                logger.debug(
+                    "New task created log received",
+                    extra={
+                        "taskIndex": event["args"]["taskIndex"],
+                        "task": event["args"]["task"]
+                    }
+                )
+                task_index = self.process_new_task_created_log(event)
 
-                    if task_index in self.task_responses:
-                        try:
-                            self.call_challenge_module(task_index)
-                        except NoErrorInTaskResponse:
-                            logger.debug("No error found in task response")
-                        except ChallengerError as e:
-                            logger.error(f"Error in challenge module: {str(e)}")
-                        except Exception as e:
-                            logger.error(f"Unexpected error in challenge module: {str(e)}")
+                if task_index in self.task_responses:
+                    self.call_challenge_module(task_index)
 
-                # Handle task response events
-                for event in task_response_sub.get_new_entries():
-                    logger.debug("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
-                    try:
-                        task_index = self.process_task_response_log(event)
+            # Handle task response events
+            for event in task_response_sub.get_new_entries():
+                logger.debug("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
+                task_index = self.process_task_response_log(event)
+                if task_index in self.tasks:
+                    self.call_challenge_module(task_index)
 
-                        if task_index in self.tasks:
-                            try:
-                                self.call_challenge_module(task_index)
-                            except NoErrorInTaskResponse:
-                                logger.debug("No error found in task response")
-                            except ChallengerError as e:
-                                logger.error(f"Error in challenge module: {str(e)}")
-                            except Exception as e:
-                                logger.error(f"Unexpected error in challenge module: {str(e)}")
-                    except TaskResponseParsingError as e:
-                        logger.error(f"Failed to process task response: {str(e)}")
-                    except Exception as e:
-                        logger.error(f"Unexpected error processing task response: {str(e)}")
-                time.sleep(3)
 
-            except Exception as e:
-                logger.error(f"Error in event processing: {str(e)}")
-                time.sleep(5)
+            time.sleep(3)
+
+
 
     def process_new_task_created_log(self, new_task_created_log) -> int:
         """Process new task creation log."""
@@ -246,107 +225,89 @@ class Challenger:
             extra={"NonSigningOperatorPubKeys": self.task_responses[task_index].non_signing_operator_pub_keys}
         )
 
-        try:
-            tx = self.task_manager.functions.raiseAndResolveChallenge(
-                self.tasks[task_index].to_tuple(),
-                self.task_responses[task_index].task_response.to_tuple(),
-                self.task_responses[task_index].task_response_metadata.to_tuple(),
-                self.task_responses[task_index].non_signing_operator_pub_keys
-            ).build_transaction({
-                "from": self.challenger_address,
-                "gas": 2000000,
-                "gasPrice": self.eth_http_client.to_wei("20", "gwei"),
-                "nonce": self.eth_http_client.eth.get_transaction_count(self.challenger_address),
-                "chainId": self.eth_http_client.eth.chain_id,
-            })
-            signed_tx = self.eth_http_client.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
-            tx_hash = self.eth_http_client.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.eth_http_client.eth.wait_for_transaction_receipt(tx_hash)
-            logger.debug("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
-        except Exception as e:
-            logger.error(f"Challenger failed to raise challenge: {str(e)}")
-            raise TransactionError()
+        tx = self.task_manager.functions.raiseAndResolveChallenge(
+            self.tasks[task_index].to_tuple(),
+            self.task_responses[task_index].task_response.to_tuple(),
+            self.task_responses[task_index].task_response_metadata.to_tuple(),
+            self.task_responses[task_index].non_signing_operator_pub_keys
+        ).build_transaction({
+            "from": self.challenger_address,
+            "gas": 2000000,
+            "gasPrice": self.eth_http_client.to_wei("20", "gwei"),
+            "nonce": self.eth_http_client.eth.get_transaction_count(self.challenger_address),
+            "chainId": self.eth_http_client.eth.chain_id,
+        })
+        signed_tx = self.eth_http_client.eth.account.sign_transaction(tx, private_key=self.challenger_ecdsa_private_key)
+        tx_hash = self.eth_http_client.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = self.eth_http_client.eth.wait_for_transaction_receipt(tx_hash)
+        logger.debug("Challenge raised", extra={"challengeTxHash": receipt["transactionHash"].hex()})
 
     def __load_ecdsa_key(self):
         """Load the ECDSA private key"""
-        try:
-            ecdsa_key_password = os.environ.get("CHALLENGER_ECDSA_KEY_PASSWORD", "")
-            if not ecdsa_key_password:
-                logger.warning("CHALLENGER_ECDSA_KEY_PASSWORD not set. using empty string.")
+        ecdsa_key_password = os.environ.get("CHALLENGER_ECDSA_KEY_PASSWORD", "")
+        if not ecdsa_key_password:
+            logger.warning("CHALLENGER_ECDSA_KEY_PASSWORD not set. using empty string.")
 
-            if not os.path.exists(self.config["ecdsa_private_key_store_path"]):
-                logger.error(f"ECDSA key file not found at: {self.config['ecdsa_private_key_store_path']}")
-                raise KeyLoadError(f"ECDSA key file not found")
+        if not os.path.exists(self.config["ecdsa_private_key_store_path"]):
+            logger.error(f"ECDSA key file not found at: {self.config['ecdsa_private_key_store_path']}")
+            raise KeyLoadError(f"ECDSA key file not found")
 
-            with open(self.config["ecdsa_private_key_store_path"], "r") as f:
-                keystore = json.load(f)
-            self.challenger_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
-            self.challenger_address = Account.from_key(self.challenger_ecdsa_private_key).address
-            logger.debug(f"Loaded ECDSA key for address: {self.challenger_address}")
-        except Exception as e:
-            logger.error(f"Failed to load ECDSA key: {str(e)}")
-            raise KeyLoadError(f"Failed to load ECDSA key: {str(e)}")
+        with open(self.config["ecdsa_private_key_store_path"], "r") as f:
+            keystore = json.load(f)
+        self.challenger_ecdsa_private_key = Account.decrypt(keystore, ecdsa_key_password).hex()
+        self.challenger_address = Account.from_key(self.challenger_ecdsa_private_key).address
+        logger.debug(f"Loaded ECDSA key for address: {self.challenger_address}")
 
     def __load_clients(self):
         """Load the AVS clients."""
-        try:
-            cfg = BuildAllConfig(
-                eth_http_url=self.config["eth_rpc_url"],
-                avs_name="incredible-squaring",
-                registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
-                operator_state_retriever_addr=self.config["operator_state_retriever_address"],
-                rewards_coordinator_addr=self.config["rewards_coordinator_address"],
-                permission_controller_addr=self.config["permission_controller_address"],
-                service_manager_addr=self.config["service_manager_address"],
-                allocation_manager_addr=self.config["allocation_manager_address"],
-                instant_slasher_addr=self.config["instant_slasher_address"],
-                delegation_manager_addr=self.config["delegation_manager_address"],
-                prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
-            )
-            self.clients = build_all(cfg, self.challenger_ecdsa_private_key)
-            self.avs_registry_reader = self.clients.avs_registry_reader
-            self.avs_registry_writer = self.clients.avs_registry_writer
-            self.el_reader = self.clients.el_reader
-            self.el_writer = self.clients.el_writer
-            self.eth_http_client = self.clients.eth_http_client
-            logger.debug("Successfully loaded AVS clients")
-        except Exception as e:
-            logger.error(f"Failed to load AVS clients: {str(e)}")
-            raise
+        cfg = BuildAllConfig(
+            eth_http_url=self.config["eth_rpc_url"],
+            avs_name="incredible-squaring",
+            registry_coordinator_addr=self.config["avs_registry_coordinator_address"],
+            operator_state_retriever_addr=self.config["operator_state_retriever_address"],
+            rewards_coordinator_addr=self.config["rewards_coordinator_address"],
+            permission_controller_addr=self.config["permission_controller_address"],
+            service_manager_addr=self.config["service_manager_address"],
+            allocation_manager_addr=self.config["allocation_manager_address"],
+            instant_slasher_addr=self.config["instant_slasher_address"],
+            delegation_manager_addr=self.config["delegation_manager_address"],
+            prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
+        )
+        self.clients = build_all(cfg, self.challenger_ecdsa_private_key)
+        self.avs_registry_reader = self.clients.avs_registry_reader
+        self.avs_registry_writer = self.clients.avs_registry_writer
+        self.el_reader = self.clients.el_reader
+        self.el_writer = self.clients.el_writer
+        self.eth_http_client = self.clients.eth_http_client
+        logger.debug("Successfully loaded AVS clients")
 
     def __load_task_manager(self):
         """Load the task manager contract."""
-        try:
-            service_manager_address = self.clients.avs_registry_writer.service_manager_addr
-            with open("abis/IncredibleSquaringServiceManager.json") as f:
-                service_manager_abi = f.read()
-            service_manager = self.eth_http_client.eth.contract(
-                address=service_manager_address, abi=service_manager_abi
-            )
+        service_manager_address = self.clients.avs_registry_writer.service_manager_addr
+        with open("abis/IncredibleSquaringServiceManager.json") as f:
+            service_manager_abi = f.read()
+        service_manager = self.eth_http_client.eth.contract(
+            address=service_manager_address, abi=service_manager_abi
+        )
 
-            task_manager_address = (
-                service_manager.functions.incredibleSquaringTaskManager().call()
-            )
-            with open("abis/IncredibleSquaringTaskManager.json") as f:
-                task_manager_abi = f.read()
-            self.task_manager = self.eth_http_client.eth.contract(address=task_manager_address, abi=task_manager_abi)
-            logger.debug(f"Task manager loaded at address: {task_manager_address}")
-        except Exception as e:
-            logger.error(f"Failed to load task manager: {str(e)}")
-            raise
+        task_manager_address = (
+            service_manager.functions.incredibleSquaringTaskManager().call()
+        )
+        with open("abis/IncredibleSquaringTaskManager.json") as f:
+            task_manager_abi = f.read()
+        self.task_manager = self.eth_http_client.eth.contract(address=task_manager_address, abi=task_manager_abi)
+        logger.debug(f"Task manager loaded at address: {task_manager_address}")
+
 
 
 if __name__ == '__main__':
-    try:
-        config_path = "config-files/challenger.yaml"
-        if not os.path.exists(config_path):
-            logger.error(f"Config file not found at: {config_path}")
-            raise FileNotFoundError(f"Config file not found at: {config_path}")
-            
-        with open(config_path, "r") as f:
-            config = yaml.load(f, Loader=yaml.BaseLoader)
-            
-        challenger = Challenger(config)
-        challenger.start(None)
-    except Exception as e:
-        logger.error(f"Error in challenger: {str(e)}")
+    config_path = "config-files/challenger.yaml"
+    if not os.path.exists(config_path):
+        logger.error(f"Config file not found at: {config_path}")
+        raise FileNotFoundError(f"Config file not found at: {config_path}")
+        
+    with open(config_path, "r") as f:
+        config = yaml.load(f, Loader=yaml.BaseLoader)
+        
+    challenger = Challenger(config)
+    challenger.start(None)

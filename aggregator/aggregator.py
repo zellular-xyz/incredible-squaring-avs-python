@@ -93,34 +93,31 @@ class Aggregator:
         """Send a new task to the task manager contract."""
         logger.debug("Aggregator sending new task", extra={"numberToSquare": num_to_square})
 
-        try:
-            # Send number to square to the task manager contract
-            tx = self.task_manager.functions.createNewTask(
-                num_to_square,
-                THRESHOLD_PERCENT,
-                nums_to_bytes([0])
-            ).build_transaction({
-                "from": self.aggregator_address,
-                "gas": 2000000,
-                "gasPrice": self.web3.to_wei("20", "gwei"),
-                "nonce": self.web3.eth.get_transaction_count(self.aggregator_address),
-                "chainId": self.web3.eth.chain_id,
-            })
+        # Send number to square to the task manager contract
+        tx = self.task_manager.functions.createNewTask(
+            num_to_square,
+            THRESHOLD_PERCENT,
+            nums_to_bytes([0])
+        ).build_transaction({
+            "from": self.aggregator_address,
+            "gas": 2000000,
+            "gasPrice": self.web3.to_wei("20", "gwei"),
+            "nonce": self.web3.eth.get_transaction_count(self.aggregator_address),
+            "chainId": self.web3.eth.chain_id,
+        })
 
-            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
-            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-            event = self.task_manager.events.NewTaskCreated().process_log(receipt['logs'][0])
+        signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
+        tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        event = self.task_manager.events.NewTaskCreated().process_log(receipt['logs'][0])
 
-            task_index = event['args']['taskIndex']
-            self.tasks[task_index] = event['args']['task']
+        task_index = event['args']['taskIndex']
+        self.tasks[task_index] = event['args']['task']
 
-            logger.debug(f"Successfully sent the new task {task_index}")
-            return task_index
+        logger.debug(f"Successfully sent the new task {task_index}")
+        return task_index
 
-        except Exception as e:
-            logger.error(f"Aggregator failed to send number to square: {str(e)}")
-            return None
+
 
     def start_sending_new_tasks(self):
         """Start sending new tasks periodically."""
@@ -147,103 +144,89 @@ class Aggregator:
 
     def submit_signature(self):
         """Handle operator signature submission."""
-        try:
-            data = request.get_json()
-            logger.debug(f"Received signed task response: {data}")
+
+        data = request.get_json()
+        logger.debug(f"Received signed task response: {data}")
+        
+        task_index = data["task_index"]
+        if task_index not in self.tasks:
+            raise TaskNotFoundError()
             
-            task_index = data["task_index"]
-            if task_index not in self.tasks:
-                raise TaskNotFoundError()
-                
-            operators = self.operators_info(data["block_number"])
-            self.__verify_signature(data, operators)
+        operators = self.operators_info(data["block_number"])
+        self.__verify_signature(data, operators)
 
-            operator_id = data["operator_id"]
+        operator_id = data["operator_id"]
 
-            if task_index not in self.responses:
-                self.responses[task_index] = {}
+        if task_index not in self.responses:
+            self.responses[task_index] = {}
 
-            if operator_id in self.responses[task_index]:
-                raise OperatorAlreadyProcessedError()
+        if operator_id in self.responses[task_index]:
+            raise OperatorAlreadyProcessedError()
 
-            self.responses[task_index][operator_id] = data
-            signer_operator_ids = [
-                operator_id for operator_id in self.responses[task_index]
-                if self.responses[task_index][operator_id]["number_squared"] == data["number_squared"]
-            ]
+        self.responses[task_index][operator_id] = data
+        signer_operator_ids = [
+            operator_id for operator_id in self.responses[task_index]
+            if self.responses[task_index][operator_id]["number_squared"] == data["number_squared"]
+        ]
 
-            signed_stake = sum(operators[operator_id]["stake"] for operator_id in signer_operator_ids)
-            total_stake = sum(operators[operator_id]["stake"] for operator_id in operators)
+        signed_stake = sum(operators[operator_id]["stake"] for operator_id in signer_operator_ids)
+        total_stake = sum(operators[operator_id]["stake"] for operator_id in operators)
 
-            logger.debug(f"Signature processed successfully", 
-                        extra={
-                            "taskIndex": task_index, 
-                            "operatorId": operator_id,
-                            "signedStake": signed_stake,
-                            "totalStake": total_stake,
-                            "threshold": THRESHOLD_PERCENT
-                        })
+        logger.debug(f"Signature processed successfully", 
+                    extra={
+                        "taskIndex": task_index, 
+                        "operatorId": operator_id,
+                        "signedStake": signed_stake,
+                        "totalStake": total_stake,
+                        "threshold": THRESHOLD_PERCENT
+                    })
 
-            if total_stake > 0 and signed_stake / total_stake < THRESHOLD_PERCENT / 100:
-                return jsonify({"success": True, "message": "Signature accepted, threshold not yet reached"}), 200
+        if total_stake > 0 and signed_stake / total_stake < THRESHOLD_PERCENT / 100:
+            return jsonify({"success": True, "message": "Signature accepted, threshold not yet reached"}), 200
 
-            # Process the aggregated response
-            signatures = [self.responses[task_index][operator_id]["signature"] for operator_id in signer_operator_ids]
-            non_signers_pubkeys_g1 = [
-                operators[operator_id]["public_key_g1"]
-                for operator_id in operators
-                if operator_id not in signer_operator_ids
-            ]
-            quorum_apks_g1 = sum(
-                [operators[operator_id]["public_key_g1"] for operator_id in operators],
-                new_zero_g1_point()
-            )
-            signers_apk_g2 = sum(
-                [operators[operator_id]["public_key_g2"] for operator_id in operators if operator_id in signer_operator_ids],
-                new_zero_g2_point()
-            )
-            signers_agg_sig_g1 = sum(
-                [Signature(signature['X'], signature['Y']) for signature in signatures],
-                new_zero_g1_point()
-            )
+        # Process the aggregated response
+        signatures = [self.responses[task_index][operator_id]["signature"] for operator_id in signer_operator_ids]
+        non_signers_pubkeys_g1 = [
+            operators[operator_id]["public_key_g1"]
+            for operator_id in operators
+            if operator_id not in signer_operator_ids
+        ]
+        quorum_apks_g1 = sum(
+            [operators[operator_id]["public_key_g1"] for operator_id in operators],
+            new_zero_g1_point()
+        )
+        signers_apk_g2 = sum(
+            [operators[operator_id]["public_key_g2"] for operator_id in operators if operator_id in signer_operator_ids],
+            new_zero_g2_point()
+        )
+        signers_agg_sig_g1 = sum(
+            [Signature(signature['X'], signature['Y']) for signature in signatures],
+            new_zero_g1_point()
+        )
 
-            indices = self.clients.avs_registry_reader.get_check_signatures_indices(
-                data["block_number"],
-                [0],
-                [int(operator_id, 16) for operator_id in operators if operator_id not in signer_operator_ids],
-            )
+        indices = self.clients.avs_registry_reader.get_check_signatures_indices(
+            data["block_number"],
+            [0],
+            [int(operator_id, 16) for operator_id in operators if operator_id not in signer_operator_ids],
+        )
 
-            self.__submit_aggregated_response({
-                "task_index": data["task_index"],
-                "block_number": data["block_number"],
-                "number_squared": data["number_squared"],
-                "number_to_be_squared": self.tasks[task_index]["numberToBeSquared"],
-                "non_signers_pubkeys_g1": non_signers_pubkeys_g1,
-                "quorum_apks_g1": [quorum_apks_g1],
-                "signers_apk_g2": signers_apk_g2,
-                "signers_agg_sig_g1": signers_agg_sig_g1,
-                "non_signer_quorum_bitmap_indices": indices[0],
-                "quorum_apk_indices": indices[1],
-                "total_stake_indices": indices[2],
-                "non_signer_stake_indices": indices[3],
-            })
-            return jsonify({"success": True, "message": "Threshold reached, aggregated response submitted"}), 200
+        self.__submit_aggregated_response({
+            "task_index": data["task_index"],
+            "block_number": data["block_number"],
+            "number_squared": data["number_squared"],
+            "number_to_be_squared": self.tasks[task_index]["numberToBeSquared"],
+            "non_signers_pubkeys_g1": non_signers_pubkeys_g1,
+            "quorum_apks_g1": [quorum_apks_g1],
+            "signers_apk_g2": signers_apk_g2,
+            "signers_agg_sig_g1": signers_agg_sig_g1,
+            "non_signer_quorum_bitmap_indices": indices[0],
+            "quorum_apk_indices": indices[1],
+            "total_stake_indices": indices[2],
+            "non_signer_stake_indices": indices[3],
+        })
+        return jsonify({"success": True, "message": "Threshold reached, aggregated response submitted"}), 200
             
-        except TaskNotFoundError as e:
-            logger.error(f"Task not found: {str(e)}")
-            return jsonify({"success": False, "error": str(e)}), 400
-        except OperatorNotRegisteredError as e:
-            logger.error(f"Operator not registered: {str(e)}")
-            return jsonify({"success": False, "error": str(e)}), 400
-        except OperatorAlreadyProcessedError as e:
-            logger.error(f"Operator already processed: {str(e)}")
-            return jsonify({"success": False, "error": str(e)}), 400
-        except SignatureVerificationError as e:
-            logger.error(f"Signature verification failed: {str(e)}")
-            return jsonify({"success": False, "error": str(e)}), 400
-        except Exception as e:
-            logger.error(f"Internal server error: {str(e)}")
-            return jsonify({"success": False, "error": "500. Internal server error"}), 500
+        
 
     def __submit_aggregated_response(self, response):
         """Submit aggregated response to the contract."""
@@ -271,23 +254,20 @@ class Aggregator:
             response["non_signer_stake_indices"],
         ]
 
-        try:
-            tx = self.task_manager.functions.respondToTask(
-                task, task_response, non_signers_stakes_and_signature
-            ).build_transaction({
-                "from": self.aggregator_address,
-                "gas": 2000000,
-                "gasPrice": self.web3.to_wei("20", "gwei"),
-                "nonce": self.web3.eth.get_transaction_count(self.aggregator_address),
-                "chainId": self.web3.eth.chain_id,
-            })
-            signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
-            tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
-            receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
-            logger.debug("Aggregated response sent successfully", extra={"txHash": receipt["transactionHash"].hex()})
-        except Exception as e:
-            logger.error(f"Failed to submit aggregated response: {str(e)}")
-            raise
+        tx = self.task_manager.functions.respondToTask(
+            task, task_response, non_signers_stakes_and_signature
+        ).build_transaction({
+            "from": self.aggregator_address,
+            "gas": 2000000,
+            "gasPrice": self.web3.to_wei("20", "gwei"),
+            "nonce": self.web3.eth.get_transaction_count(self.aggregator_address),
+            "chainId": self.web3.eth.chain_id,
+        })
+        signed_tx = self.web3.eth.account.sign_transaction(tx, private_key=self.aggregator_ecdsa_private_key)
+        tx_hash = self.web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        receipt = self.web3.eth.wait_for_transaction_receipt(tx_hash)
+        logger.debug("Aggregated response sent successfully", extra={"txHash": receipt["transactionHash"].hex()})
+
 
     def start_server(self):
         """Start the Flask server."""
@@ -360,13 +340,8 @@ class Aggregator:
         )
         response.raise_for_status()
 
-        try:
-            operators = response.json()["data"]["operators"]
-        except (KeyError, TypeError, ValueError) as e:
-            raise RuntimeError(
-                f"Unexpected response format while parsing operators: "
-                f"{response.text}, error: {e}"
-            )
+        operators = response.json()["data"]["operators"]
+
 
         for op in operators:
             op["public_key_g1"] = G1Point(

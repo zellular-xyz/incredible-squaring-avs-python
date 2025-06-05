@@ -53,8 +53,9 @@ contract IncredibleSquaringDeployer is Script {
     address public AGGREGATOR_ADDR;
     address public TASK_GENERATOR_ADDR;
     address public CONTRACTS_REGISTRY_ADDR;
-    address public OPERATOR_ADDR;
-    address public OPERATOR_2_ADDR;
+    address public OPERATOR_ADDR_1;
+    address public OPERATOR_ADDR_2;
+    address public OPERATOR_ADDR_3;
     ContractsRegistry contractsRegistry;
 
     StrategyBaseTVLLimits public erc20MockStrategy;
@@ -109,11 +110,13 @@ contract IncredibleSquaringDeployer is Script {
 
         erc20Mock = new MockERC20();
         console.log(address(erc20Mock));
-        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr, 15_000e18);
-        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_2_addr, 30_000e18);
-        console.log(isConfig.operator_2_addr);
-        (bool s,) = isConfig.operator_2_addr.call{value: 0.1 ether}("");
-        require(s);
+        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr_1, 30_000e18);
+        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr_2, 30_000e18);
+        FundOperator.fund_operator(address(erc20Mock), isConfig.operator_addr_3, 30_000e18);
+        (bool s2,) = isConfig.operator_addr_2.call{value: 0.1 ether}("");
+        require(s2);
+        (bool s3,) = isConfig.operator_addr_3.call{value: 0.1 ether}("");
+        require(s3);
         incredibleSquaringStrategy =
             IStrategy(StrategyFactory(configData.strategyFactory).deployNewStrategy(erc20Mock));
         rewardscoordinator = configData.rewardsCoordinator;

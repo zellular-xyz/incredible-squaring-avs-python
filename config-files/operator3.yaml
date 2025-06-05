@@ -1,0 +1,11 @@
+production: true
+operator_address: 0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC
+eth_rpc_url: http://localhost:8545
+prom_metrics_ip_port_address : localhost:9090
+ecdsa_private_key_store_path: tests/keys/operator3.ecdsa.key.json
+bls_private_key_store_path: tests/keys/operator3.bls.key.json
+aggregator_server_ip_port_address: localhost:8090
+register_operator_on_startup: true
+operator_set_id: 0x00
+socket: operator-socket
+times_failing: 25

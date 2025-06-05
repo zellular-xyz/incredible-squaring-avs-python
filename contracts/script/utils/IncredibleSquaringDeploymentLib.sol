@@ -77,8 +77,9 @@ library IncredibleSquaringDeploymentLib {
     struct IncredibleSquaringSetupConfig {
         uint256 numQuorums;
         uint256[] operatorParams;
-        address operator_addr;
-        address operator_2_addr;
+        address operator_addr_1;
+        address operator_addr_2;
+        address operator_addr_3;
         address contracts_registry_addr;
         address task_generator_addr;
         address aggregator_addr;
@@ -290,9 +291,10 @@ library IncredibleSquaringDeploymentLib {
         data.operatorParams = json.readUintArray(".operator_params");
         data.aggregator_addr = json.readAddress(".aggregator_addr");
         data.contracts_registry_addr = json.readAddress(".contracts_registry_addr");
-        data.operator_addr = json.readAddress(".operator_addr");
+        data.operator_addr_1 = json.readAddress(".operator_addr_1");
+        data.operator_addr_2 = json.readAddress(".operator_addr_2");
+        data.operator_addr_3 = json.readAddress(".operator_addr_3");
         data.task_generator_addr = json.readAddress(".task_generator_addr");
-        data.operator_2_addr = json.readAddress(".operator_2_addr");
         data.rewardsInitiator = json.readAddress(".rewards_initiator_addr");
         data.rewardsOwner = json.readAddress(".rewards_owner_addr");
         data.rewardsInitiatorKey = json.readUint(".rewards_initiator_key");

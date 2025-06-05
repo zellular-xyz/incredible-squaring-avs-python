@@ -320,13 +320,21 @@ class Challenger:
 
 
 if __name__ == '__main__':
-    config_path = "config-files/challenger.yaml"
-    if not os.path.exists(config_path):
-        logger.error(f"Config file not found at: {config_path}")
-        raise FileNotFoundError(f"Config file not found at: {config_path}")
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+
+    challenger_config_path = os.path.join(dir_path, "../config-files/challenger.yaml")
+    if not os.path.exists(challenger_config_path):
+        logger.error(f"Config file not found at: {challenger_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {challenger_config_path}")
+    with open(challenger_config_path, "r") as f:
+        challenger_config = yaml.load(f, Loader=yaml.BaseLoader)
         
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.BaseLoader)
-        
-    challenger = Challenger(config)
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    challenger = Challenger(config={**challenger_config, **avs_config})
     challenger.start(None)

@@ -375,8 +375,20 @@ class Aggregator:
 
 if __name__ == '__main__':
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(dir_path, "../config-files/aggregator.yaml")
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.BaseLoader)
-    aggregator = Aggregator(config)
+
+    aggregator_config_path = os.path.join(dir_path, "../config-files/aggregator.yaml")
+    if not os.path.exists(aggregator_config_path):
+        logger.error(f"Config file not found at: {aggregator_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {aggregator_config_path}")
+    with open(aggregator_config_path, "r") as f:
+        aggregator_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    aggregator = Aggregator(config={**aggregator_config, **avs_config})
     aggregator.start()

@@ -329,13 +329,20 @@ class SquaringOperator:
 
 if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.abspath(__file__))
-    config_path = os.path.join(dir_path, "../config-files/operator.anvil.yaml")
-    if not os.path.exists(config_path):
-        logger.error(f"Config file not found at: {config_path}")
-        raise FileNotFoundError(f"Config file not found at: {config_path}")
-        
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    operator = SquaringOperator(config=config)
+    operator_config_path = os.path.join(dir_path, "../config-files/operator1.yaml")
+    if not os.path.exists(operator_config_path):
+        logger.error(f"Config file not found at: {operator_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {operator_config_path}")        
+    with open(operator_config_path, "r") as f:
+        operator_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    operator = SquaringOperator(config={**operator_config, **avs_config})
     operator.start()

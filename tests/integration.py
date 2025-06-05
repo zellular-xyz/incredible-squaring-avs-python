@@ -27,15 +27,23 @@ def start_anvil_and_deploy_contracts():
 
 def start_operator():
     """start operator"""
-    config_path = "config-files/operator.anvil.yaml"
-    if not os.path.exists(config_path):
-        logger.error(f"Config file not found at: {config_path}")
-        raise FileNotFoundError(f"Config file not found at: {config_path}")
+    dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    with open(config_path, "r") as f:
-        config = yaml.load(f, Loader=yaml.BaseLoader)
+    operator_config_path = os.path.join(dir_path, "../config-files/operator1.yaml")
+    if not os.path.exists(operator_config_path):
+        logger.error(f"Config file not found at: {operator_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {operator_config_path}")
+    with open(operator_config_path, "r") as f:
+        operator_config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    operator = SquaringOperator(config=config)
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    operator = SquaringOperator(config={**operator_config, **avs_config})
     operator_thread = threading.Thread(target=operator.start)
     operator_thread.start()
     return operator, operator_thread
@@ -43,9 +51,23 @@ def start_operator():
 
 def start_aggregator():
     """start aggregator"""
-    with open("config-files/aggregator.yaml", "r") as f:
-        config = yaml.load(f, Loader=yaml.BaseLoader)
-    aggregator = MockAggregator(config)
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+
+    aggregator_config_path = os.path.join(dir_path, "../config-files/aggregator.yaml")
+    if not os.path.exists(aggregator_config_path):
+        logger.error(f"Config file not found at: {aggregator_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {aggregator_config_path}")
+    with open(aggregator_config_path, "r") as f:
+        aggregator_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    aggregator = MockAggregator(config={**aggregator_config, **avs_config})
     aggregator_thread = threading.Thread(target=aggregator.start)
     aggregator_thread.start()
     return aggregator, aggregator_thread

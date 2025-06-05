@@ -272,9 +272,7 @@ class SquaringOperator:
             permission_controller_addr=self.config["permission_controller_address"],
             service_manager_addr=self.config["service_manager_address"],
             allocation_manager_addr=self.config["allocation_manager_address"],
-            instant_slasher_addr=self.config["instant_slasher_address"],
             delegation_manager_addr=self.config["delegation_manager_address"],
-            prom_metrics_ip_port_address="",
         )
         self.clients = build_all(cfg, self.operator_ecdsa_private_key)
         self.web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
@@ -321,7 +319,8 @@ class SquaringOperator:
 
 
 if __name__ == "__main__":
-    config_path = "config-files/operator.anvil.yaml"
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(dir_path, "../config-files/operator.anvil.yaml")
     if not os.path.exists(config_path):
         logger.error(f"Config file not found at: {config_path}")
         raise FileNotFoundError(f"Config file not found at: {config_path}")

@@ -10,7 +10,7 @@ from eth_account import Account
 from flask import Flask, request, jsonify
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.chainio.utils import nums_to_bytes
-from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tupple, g2_to_tupple, new_zero_g1_point, new_zero_g2_point
+from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tuple, g2_to_tuple, new_zero_g1_point, new_zero_g2_point
 import requests
 
 TASK_CHALLENGE_WINDOW_BLOCK = 100
@@ -245,10 +245,10 @@ class Aggregator:
         ]
         non_signers_stakes_and_signature = [
             response["non_signer_quorum_bitmap_indices"],
-            [g1_to_tupple(g1) for g1 in response["non_signers_pubkeys_g1"]],
-            [g1_to_tupple(g1) for g1 in response["quorum_apks_g1"]],
-            g2_to_tupple(response["signers_apk_g2"]),
-            g1_to_tupple(response["signers_agg_sig_g1"]),
+            [g1_to_tuple(g1) for g1 in response["non_signers_pubkeys_g1"]],
+            [g1_to_tuple(g1) for g1 in response["quorum_apks_g1"]],
+            g2_to_tuple(response["signers_apk_g2"]),
+            g1_to_tuple(response["signers_agg_sig_g1"]),
             response["quorum_apk_indices"],
             response["total_stake_indices"],
             response["non_signer_stake_indices"],
@@ -296,9 +296,7 @@ class Aggregator:
             permission_controller_addr=self.config["permission_controller_address"],
             service_manager_addr=self.config["service_manager_address"],
             allocation_manager_addr=self.config["allocation_manager_address"],
-            instant_slasher_addr=self.config["instant_slasher_address"],
             delegation_manager_addr=self.config["delegation_manager_address"],
-            prom_metrics_ip_port_address=self.config["prom_metrics_ip_port_address"],
         )
         self.clients = build_all(cfg, self.aggregator_ecdsa_private_key)
 
@@ -359,7 +357,9 @@ class Aggregator:
         return {op["operatorId"]: op for op in operators}
 
 if __name__ == '__main__':
-    with open("config-files/aggregator.yaml", "r") as f:
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+    config_path = os.path.join(dir_path, "../config-files/aggregator.yaml")
+    with open(config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.BaseLoader)
     aggregator = Aggregator(config)
     aggregator.start()

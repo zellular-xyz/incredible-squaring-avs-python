@@ -111,31 +111,52 @@ class Challenger:
 
         logger.debug("Listening for new events...")
         while True:
-            # Handle new task created events
-            for event in new_task_sub.get_new_entries():
-                logger.debug(
-                    "New task created log received",
-                    extra={
-                        "taskIndex": event["args"]["taskIndex"],
-                        "task": event["args"]["task"]
-                    }
-                )
-                task_index = self.process_new_task_created_log(event)
+            try:
+                # Handle new task created events
+                for event in new_task_sub.get_new_entries():
+                    logger.debug(
+                        "New task created log received",
+                        extra={
+                            "taskIndex": event["args"]["taskIndex"],
+                            "task": event["args"]["task"]
+                        }
+                    )
+                    task_index = self.process_new_task_created_log(event)
 
-                if task_index in self.task_responses:
-                    self.call_challenge_module(task_index)
+                    if task_index in self.task_responses:
+                        try:
+                            self.call_challenge_module(task_index)
+                        except NoErrorInTaskResponse:
+                            logger.debug("No error found in task response")
+                        except ChallengerError as e:
+                            logger.error(f"Error in challenge module: {str(e)}")
+                        except Exception as e:
+                            logger.error(f"Unexpected error in challenge module: {str(e)}")
 
-            # Handle task response events
-            for event in task_response_sub.get_new_entries():
-                logger.debug("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
-                task_index = self.process_task_response_log(event)
-                if task_index in self.tasks:
-                    self.call_challenge_module(task_index)
+                # Handle task response events
+                for event in task_response_sub.get_new_entries():
+                    logger.debug("Task response log received", extra={"taskResponse": event["args"]["taskResponse"]})
+                    try:
+                        task_index = self.process_task_response_log(event)
 
+                        if task_index in self.tasks:
+                            try:
+                                self.call_challenge_module(task_index)
+                            except NoErrorInTaskResponse:
+                                logger.debug("No error found in task response")
+                            except ChallengerError as e:
+                                logger.error(f"Error in challenge module: {str(e)}")
+                            except Exception as e:
+                                logger.error(f"Unexpected error in challenge module: {str(e)}")
+                    except TaskResponseParsingError as e:
+                        logger.error(f"Failed to process task response: {str(e)}")
+                    except Exception as e:
+                        logger.error(f"Unexpected error processing task response: {str(e)}")
+                time.sleep(3)
 
-            time.sleep(3)
-
-
+            except Exception as e:
+                logger.error(f"Error in event processing: {str(e)}")
+                time.sleep(5)
 
     def process_new_task_created_log(self, new_task_created_log) -> int:
         """Process new task creation log."""

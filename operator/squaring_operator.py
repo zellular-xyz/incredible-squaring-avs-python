@@ -76,14 +76,20 @@ class SquaringOperator:
         
         logger.debug("Listening for new tasks...")
         while not self._stop_flag:
-            for event in event_filter.get_new_entries():
-                logger.debug(f"New task created: {event}")
-                task_response = self.process_task_event(event)
-                signed_response = self.sign_task_response(task_response)
-                self.send_signed_task_response(signed_response)
+            try:
+                for event in event_filter.get_new_entries():
+                    logger.debug(f"New task created: {event}")
+                    try:
+                        task_response = self.process_task_event(event)
+                        signed_response = self.sign_task_response(task_response)
+                        self.send_signed_task_response(signed_response)
+                    except Exception as e:
+                        logger.error(f"Unexpected error handling task: {str(e)}")
 
-            time.sleep(3)
-
+                time.sleep(3)
+            except Exception as e:
+                logger.error(f"Error in event processing loop: {str(e)}")
+                time.sleep(5)  
 
     def process_task_event(self, event):
         """Process a new task event and generate a task response"""
@@ -152,10 +158,13 @@ class SquaringOperator:
         # Wait briefly to ensure the aggregator has processed the task
         time.sleep(3)
         
-        url = f'http://{self.config["aggregator_server_ip_port_address"]}/signature'
-        response = requests.post(url, json=data)
-        response.raise_for_status()
-        logger.debug(f"Successfully sent task response to aggregator, response: {response.text}")
+        try:
+            url = f'http://{self.config["aggregator_server_ip_port_address"]}/signature'
+            response = requests.post(url, json=data)
+            response.raise_for_status()
+            logger.debug(f"Successfully sent task response to aggregator, response: {response.text}")
+        except Exception as e:
+            logger.error(f"Unknown error sending task response: {str(e)}")
 
     def register_operator_with_eigenlayer(self):
         operator = Operator(

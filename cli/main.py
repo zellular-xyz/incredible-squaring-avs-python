@@ -3,7 +3,7 @@ import argparse
 import logging
 import sys
 import yaml
-from squaring_operator import SquaringOperator
+from operator.squaring_operator import SquaringOperator
 from web3 import Web3
 
 logger = logging.getLogger(__name__)

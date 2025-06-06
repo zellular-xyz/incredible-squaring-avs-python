@@ -25,11 +25,11 @@ def start_anvil_and_deploy_contracts():
     return anvil_process
 
 
-def start_operator():
+def start_operator(number):
     """start operator"""
     dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    operator_config_path = os.path.join(dir_path, "../config-files/operator1.yaml")
+    operator_config_path = os.path.join(dir_path, f"../config-files/operator{number}.yaml")
     if not os.path.exists(operator_config_path):
         logger.error(f"Config file not found at: {operator_config_path}")
         raise FileNotFoundError(f"Config file not found at: {operator_config_path}")
@@ -77,9 +77,11 @@ if __name__ == "__main__":
     print("Starting anvil and deploying contracts")
     anvil_process = start_anvil_and_deploy_contracts()
     print("anvil started and contracts deployed")
-    print("Starting operator")
-    operator, operator_thread = start_operator()
-    print("operator started")
+    print("Starting operators")
+    operator1, operator_thread1 = start_operator(1)
+    operator2, operator_thread2 = start_operator(2)
+    operator3, operator_thread3 = start_operator(3)
+    print("operators started")
     print("Starting aggregator")
     aggregator, aggregator_thread = start_aggregator()
     print("aggregator started")
@@ -100,9 +102,13 @@ if __name__ == "__main__":
         print("PASSED")
 
     print("Cleaning up processes...")
-    operator.stop()
+    operator1.stop()
+    operator2.stop()
+    operator3.stop()
     aggregator.stop()
-    operator_thread.join()
+    operator_thread1.join()
+    operator_thread2.join()
+    operator_thread3.join()
     anvil_process.terminate()
     print("Cleanup complete")
     pid = os.getpid()

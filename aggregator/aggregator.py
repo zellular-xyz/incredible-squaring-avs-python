@@ -16,7 +16,7 @@ import requests
 TASK_CHALLENGE_WINDOW_BLOCK = 100
 BLOCK_TIME_SECONDS = 12
 AVS_NAME = "incredible-squaring"
-THRESHOLD_PERCENT = 70
+THRESHOLD_PERCENT = 50
 
 # change logging level to DEBUG for testing
 logging.basicConfig(level=logging.INFO)

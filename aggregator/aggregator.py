@@ -10,7 +10,7 @@ from eth_account import Account
 from flask import Flask, request, jsonify
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.chainio.utils import nums_to_bytes
-from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tuple, g2_to_tuple, new_zero_g1_point, new_zero_g2_point
+from eigensdk.crypto.bls.attestation import Signature, G1Point, G2Point, g1_to_tupple, g2_to_tupple, new_zero_g1_point, new_zero_g2_point
 import requests
 
 TASK_CHALLENGE_WINDOW_BLOCK = 100
@@ -262,10 +262,10 @@ class Aggregator:
         ]
         non_signers_stakes_and_signature = [
             response["non_signer_quorum_bitmap_indices"],
-            [g1_to_tuple(g1) for g1 in response["non_signers_pubkeys_g1"]],
-            [g1_to_tuple(g1) for g1 in response["quorum_apks_g1"]],
-            g2_to_tuple(response["signers_apk_g2"]),
-            g1_to_tuple(response["signers_agg_sig_g1"]),
+            [g1_to_tupple(g1) for g1 in response["non_signers_pubkeys_g1"]],
+            [g1_to_tupple(g1) for g1 in response["quorum_apks_g1"]],
+            g2_to_tupple(response["signers_apk_g2"]),
+            g1_to_tupple(response["signers_agg_sig_g1"]),
             response["quorum_apk_indices"],
             response["total_stake_indices"],
             response["non_signer_stake_indices"],

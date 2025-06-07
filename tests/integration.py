@@ -40,7 +40,7 @@ def start_operator(number):
         avs_config = yaml.load(f, Loader=yaml.BaseLoader)
 
     operator = SquaringOperator(config={**operator_config, **avs_config})
-    operator_thread = threading.Thread(target=operator.start)
+    operator_thread = threading.Thread(target=operator.start, daemon=True)
     operator_thread.start()
     return operator, operator_thread
 
@@ -64,7 +64,7 @@ def start_aggregator():
         avs_config = yaml.load(f, Loader=yaml.BaseLoader)
 
     aggregator = MockAggregator(config={**aggregator_config, **avs_config})
-    aggregator_thread = threading.Thread(target=aggregator.start)
+    aggregator_thread = threading.Thread(target=aggregator.start, daemon=True)
     aggregator_thread.start()
     return aggregator, aggregator_thread
 
@@ -107,5 +107,5 @@ if __name__ == "__main__":
     operator_thread3.join()
     anvil_process.terminate()
     print("Cleanup complete")
-    pid = os.getpid()
-    os.kill(pid, 9)
+    # pid = os.getpid()
+    # os.kill(pid, 9)

@@ -8,6 +8,13 @@ ___TESTS___: ##
 test:
 	python ./tests/integration.py
 
+test-docker: ## Run tests in Docker container
+	docker build -t incredible-squaring-avs .
+	docker run --rm incredible-squaring-avs
+
+test-docker-compose: ## Run tests using docker-compose
+	docker-compose run --rm incredible-squaring-avs
+
 ___CONTRACTS___: ## 
 
 build-contracts: ## builds all contracts

@@ -3,6 +3,11 @@
 
 -----------------------------: ## 
 
+___TESTS___: ## 
+
+test:
+	python ./tests/integration.py
+
 ___CONTRACTS___: ## 
 
 build-contracts: ## builds all contracts

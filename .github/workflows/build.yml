@@ -17,3 +17,6 @@ jobs:
 
       - name: Build Docker images
         run: docker build .
+
+      - name: Run tests
+        run: make test

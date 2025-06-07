@@ -16,11 +16,7 @@ logger = logging.getLogger(__name__)
 def start_anvil_and_deploy_contracts():
     """start anvil and deploy contracts"""
     anvil_process = subprocess.Popen(
-        ["anvil"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-    )
-    time.sleep(1)
-    subprocess.run(
-        ["make", "deploy-all"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        ["anvil", "--load-state", "contracts/state.json", "--print-traces", "-vvvvv"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
     return anvil_process
 
@@ -74,9 +70,9 @@ def start_aggregator():
 
 
 if __name__ == "__main__":
-    print("Starting anvil and deploying contracts")
+    print("Starting anvil")
     anvil_process = start_anvil_and_deploy_contracts()
-    print("anvil started and contracts deployed")
+    print("Anvil started")
     print("Starting operators")
     operator1, operator_thread1 = start_operator(1)
     operator2, operator_thread2 = start_operator(2)

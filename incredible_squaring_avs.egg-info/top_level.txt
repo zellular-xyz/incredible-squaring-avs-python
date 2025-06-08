@@ -1,7 +1,0 @@
-abis
-aggregator
-challenger
-cli
-config-files
-diagrams
-squaring_operator

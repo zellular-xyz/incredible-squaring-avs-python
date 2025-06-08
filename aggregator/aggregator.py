@@ -204,8 +204,8 @@ class Aggregator:
             signer_operator_ids = [
                 operator_id
                 for operator_id in self.responses[task_index]
-                if self.responses[task_index][operator_id]["number_squared"]
-                == data["number_squared"]
+                if (self.responses[task_index][operator_id]["number_squared"] ==
+                    data["number_squared"])
             ]
 
             signed_stake = sum(
@@ -216,7 +216,7 @@ class Aggregator:
             )
 
             logger.debug(
-                f"Signature processed successfully",
+                "Signature processed successfully",
                 extra={
                     "taskIndex": task_index,
                     "operatorId": operator_id,
@@ -322,7 +322,7 @@ class Aggregator:
     def __submit_aggregated_response(self, response):
         """Submit aggregated response to the contract."""
         logger.debug(
-            f"Submitting aggregated response to contract",
+            "Submitting aggregated response to contract",
             extra={"taskIndex": response["task_index"]},
         )
 

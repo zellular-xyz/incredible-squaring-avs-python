@@ -335,7 +335,7 @@ class Challenger:
             logger.error(
                 f"ECDSA key file not found at: {self.config['ecdsa_private_key_store_path']}"
             )
-            raise KeyLoadError(f"ECDSA key file not found")
+            raise KeyLoadError("ECDSA key file not found")
 
         with open(self.config["ecdsa_private_key_store_path"], "r") as f:
             keystore = json.load(f)

@@ -149,7 +149,7 @@ class SquaringOperator:
 
     def send_signed_task_response(self, signed_response):
         """Send a signed task response to the aggregator"""
-        logger.debug(f"Submitting task response to aggregator")
+        logger.debug("Submitting task response to aggregator")
 
         data = {
             "task_index": signed_response["taskResponse"]["referenceTaskIndex"],

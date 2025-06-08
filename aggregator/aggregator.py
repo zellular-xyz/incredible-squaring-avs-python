@@ -204,8 +204,10 @@ class Aggregator:
             signer_operator_ids = [
                 operator_id
                 for operator_id in self.responses[task_index]
-                if (self.responses[task_index][operator_id]["number_squared"] ==
-                    data["number_squared"])
+                if (
+                    self.responses[task_index][operator_id]["number_squared"]
+                    == data["number_squared"]
+                )
             ]
 
             signed_stake = sum(
@@ -284,10 +286,10 @@ class Aggregator:
                     "quorum_apks_g1": [quorum_apks_g1],
                     "signers_apk_g2": signers_apk_g2,
                     "signers_agg_sig_g1": signers_agg_sig_g1,
-                    "non_signer_quorum_bitmap_indices": indices[0],
-                    "quorum_apk_indices": indices[1],
-                    "total_stake_indices": indices[2],
-                    "non_signer_stake_indices": indices[3],
+                    "non_signer_quorum_bitmap_indices": indices.non_signer_quorum_bitmap_indices,
+                    "quorum_apk_indices": indices.quorum_apk_indices,
+                    "total_stake_indices": indices.total_stake_indices,
+                    "non_signer_stake_indices": indices.non_signer_stake_indices,
                 }
             )
             return (

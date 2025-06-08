@@ -32,7 +32,6 @@ def register_with_avs(config_path):
         logger.error(f"Failed to create total delegated stake quorum: {receipt.status}")
         return False
     operator.register_for_operator_sets([0])
-    operator.print_operator_status()
     logger.info("Successfully registered operator with AVS")
     return True
 

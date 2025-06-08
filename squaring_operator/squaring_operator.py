@@ -70,6 +70,9 @@ class SquaringOperator:
         """Start the operator service"""
         logger.debug("Starting Operator...")
 
+        if self.task_manager is None:
+            raise RuntimeError("Task manager not loaded")
+
         event_filter = self.task_manager.events.NewTaskCreated.create_filter(
             from_block="latest"
         )
@@ -127,6 +130,9 @@ class SquaringOperator:
 
     def sign_task_response(self, task_response):
         """Sign a task response with the operator's BLS key"""
+        if self.bls_key_pair is None:
+            raise RuntimeError("BLS key pair not loaded")
+
         encoded = eth_abi.encode(
             ["uint32", "uint256"],
             [task_response["referenceTaskIndex"], task_response["numberSquared"]],
@@ -151,6 +157,9 @@ class SquaringOperator:
         """Send a signed task response to the aggregator"""
         logger.debug("Submitting task response to aggregator")
 
+        if self.web3 is None:
+            raise RuntimeError("Web3 instance not loaded")
+
         data = {
             "task_index": signed_response["taskResponse"]["referenceTaskIndex"],
             "number_squared": signed_response["taskResponse"]["numberSquared"],
@@ -173,6 +182,9 @@ class SquaringOperator:
             logger.error(f"Unknown error sending task response: {str(e)}")
 
     def register_operator_with_eigenlayer(self):
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         operator = Operator(
             address=self.config["operator_address"],
             earnings_receiver_address=self.config["operator_address"],
@@ -184,10 +196,15 @@ class SquaringOperator:
         return self.clients.el_writer.register_as_operator(operator)
 
     def deposit_into_strategy(self, strategy_addr, amount):
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
         return self.clients.el_writer.deposit_erc20_into_strategy(strategy_addr, amount)
 
     def register_for_operator_sets(self, operator_set_ids):
         """Register the operator for operator sets"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         request = {
             "operator_address": self.config["operator_address"],
             "avs_address": self.config["service_manager_address"],
@@ -200,6 +217,9 @@ class SquaringOperator:
         )
 
     def deregister_from_operator_sets(self, operator_set_ids):
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         request = {
             "avs_address": self.config["service_manager_address"],
             "operator_set_ids": operator_set_ids,
@@ -211,6 +231,9 @@ class SquaringOperator:
 
     def modify_allocations(self, strategies, new_magnitudes, operator_set_id):
         """Modify allocations for the operator"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         avs_service_manager = self.config.get("service_manager_address")
         if not avs_service_manager:
             logger.error("Service manager address not configured")
@@ -226,6 +249,8 @@ class SquaringOperator:
 
     def set_allocation_delay(self, delay):
         """Set allocation delay for the operator"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
         self.clients.el_writer.set_allocation_delay(
             Web3.to_checksum_address(self.config["operator_address"]), delay
         )
@@ -238,6 +263,9 @@ class SquaringOperator:
         selector: str,
     ):
         """Set the appointee for the operator"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         self.clients.el_writer.set_permission(
             {
                 "account_address": account_address,
@@ -257,6 +285,9 @@ class SquaringOperator:
             minimum_stake_required: Minimum stake required for the quorum
             strategy_params: List of tuples (strategy_address, weight)
         """
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         receipt = self.clients.avs_registry_writer.create_total_delegated_stake_quorum(
             operator_set_params, minimum_stake_required, strategy_params
         )
@@ -289,6 +320,9 @@ class SquaringOperator:
 
     def __load_clients(self):
         """Load the AVS clients"""
+        if self.operator_ecdsa_private_key is None:
+            raise RuntimeError("ECDSA private key not loaded")
+
         cfg = BuildAllConfig(
             eth_http_url=self.config["eth_rpc_url"],
             avs_name="incredible-squaring",
@@ -308,6 +342,11 @@ class SquaringOperator:
 
     def __load_task_manager(self):
         """Load the task manager contract"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+        if self.web3 is None:
+            raise RuntimeError("Web3 instance not loaded")
+
         service_manager_address = self.clients.avs_registry_writer.service_manager_addr
 
         service_manager_abi_path = "abis/IncredibleSquaringServiceManager.json"
@@ -341,6 +380,9 @@ class SquaringOperator:
 
     def __load_operator_id(self):
         """Load the operator ID"""
+        if self.clients is None:
+            raise RuntimeError("Clients not loaded")
+
         self.operator_id = self.clients.avs_registry_reader.get_operator_id(
             self.config["operator_address"]
         )

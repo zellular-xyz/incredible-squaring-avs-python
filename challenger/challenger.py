@@ -196,7 +196,7 @@ class Challenger:
         logger.debug(
             f"Processed new task {task_index} with number to be squared: {task.number_to_be_squared}"
         )
-        return task_index
+        return int(task_index)
 
     def process_task_response_log(self, task_response_log) -> int:
         """Process task response log."""
@@ -229,7 +229,7 @@ class Challenger:
         logger.debug(
             f"Processed task response for task {task_index} with number squared: {task_response.number_squared}"
         )
-        return task_index
+        return int(task_index)
 
     def call_challenge_module(self, task_index: int) -> Optional[Exception]:
         """Call the challenge module for a given task."""
@@ -261,7 +261,7 @@ class Challenger:
         tx = self.eth_http_client.eth.get_transaction(
             task_response_log["transactionHash"]
         )
-        input_data = tx.input
+        input_data = tx["input"]
         func_obj, func_params = self.task_manager.decode_function_input(input_data)
         non_signer_pubkeys = func_params["nonSignerStakesAndSignature"][
             "nonSignerPubkeys"

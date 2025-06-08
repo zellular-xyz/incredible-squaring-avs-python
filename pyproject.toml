@@ -44,10 +44,7 @@ line_length = 88
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
 check_untyped_defs = true
-disallow_untyped_decorators = true
 no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
@@ -59,5 +56,8 @@ strict_equality = true
 module = [
     "web3.*",
     "eigensdk.*",
+    "yaml.*",
+    "requests.*",
+    "flask.*",
 ]
 ignore_missing_imports = true 

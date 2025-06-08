@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "incredible-squaring-avs"
+version = "0.1.0"
+description = "A Python-based implementation of the Incredible Squaring AVS middleware with full integration into EigenLayer"
+authors = [
+    {name = "Zellular", email = "info@zellular.xyz"}
+]
+dependencies = [
+    "eigensdk @ git+https://github.com/zellular-xyz/eigensdk-python.git",
+    "web3==7.12.0",
+    "PyYAML==6.0.2",
+    "Flask==3.1.1",
+]
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.0.0",
+    "flake8>=6.0.0",
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["*"]
+exclude = ["contracts*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[[tool.mypy.overrides]]
+module = [
+    "web3.*",
+    "eigensdk.*",
+]
+ignore_missing_imports = true 

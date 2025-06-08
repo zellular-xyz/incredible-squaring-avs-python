@@ -31,6 +31,7 @@ COPY . .
 
 # Install the project in editable mode
 RUN pip install -e .
+RUN pip install -e ".[dev]"
 
 # Default command
 CMD ["make", "test"]

@@ -1,0 +1,12 @@
+eigensdk@ git+https://github.com/zellular-xyz/eigensdk-python.git
+web3==7.12.0
+PyYAML==6.0.2
+Flask==3.1.1
+
+[dev]
+mypy>=1.0.0
+flake8>=6.0.0
+black>=23.0.0
+isort>=5.12.0
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

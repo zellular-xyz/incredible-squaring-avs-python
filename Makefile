@@ -3,6 +3,11 @@
 
 -----------------------------: ## 
 
+___BUILD___: ## 
+
+rebuild:
+	COMPOSE_BAKE=true docker compose build --no-cache
+
 ___TESTS___: ## 
 
 test:
@@ -14,6 +19,23 @@ test-docker: ## Run tests in Docker container
 
 test-docker-compose: ## Run tests using docker-compose
 	docker-compose run --rm incredible-squaring-avs
+
+lint: ## Run linting with flake8
+	flake8 aggregator/ squaring_operator/ challenger/ cli/ --count --select=E9,F63,F7,F82 --show-source --statistics
+	flake8 aggregator/ squaring_operator/ challenger/ cli/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+format: ## Format code with black and isort
+	black aggregator/ squaring_operator/ challenger/ cli/
+	isort aggregator/ squaring_operator/ challenger/ cli/
+
+format-check: ## Check if code is properly formatted
+	black --check aggregator/ squaring_operator/ challenger/ cli/
+	isort --check-only aggregator/ squaring_operator/ challenger/ cli/
+
+mypy: ## Run type checking with mypy
+	mypy aggregator/ squaring_operator/ challenger/ cli/
+
+check-all: format-check lint mypy ## Run all code quality checks
 
 ___CONTRACTS___: ## 
 

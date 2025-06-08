@@ -32,6 +32,12 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+For development (includes linting, type checking, and formatting tools):
+
+```bash
+pip install -e ".[dev]"
+```
+
 ---
 
 ## Running the Project
@@ -114,6 +120,46 @@ Run integration tests locally:
 pytest tests/ -v
 ```
 
+## Code Quality
+
+### Linting
+
+Run code linting with flake8:
+
+```bash
+make lint
+```
+
+### Type Checking
+
+Run type checking with mypy:
+
+```bash
+make mypy
+```
+
+### Code Formatting
+
+Format code with black and isort:
+
+```bash
+make format
+```
+
+Check if code is properly formatted:
+
+```bash
+make format-check
+```
+
+### Run All Checks
+
+Run all code quality checks at once:
+
+```bash
+make check-all
+```
+
 ## Avs Task Description
 
 The architecture of the AVS contains:
@@ -144,7 +190,7 @@ The architecture of the AVS contains:
 
 5. If a response was sent within the [response window](contracts/src/IncredibleSquaringTaskManager.sol#L119), we enter the [Dispute resolution] period.
    - [Off-chain] A challenge window is launched during which anyone can [raise a dispute](contracts/src/IncredibleSquaringTaskManager.sol#L171) in a DisputeResolution contract (in our case, this is the same as the TaskManager contract)
-   - [On-chain] The DisputeResolution contract resolves that a particular operator’s response is not the correct response (that is, not the square of the integer specified in the task) or the opted-in operator didn’t respond during the response window. If the dispute is resolved, the operator will be frozen in the Registration contract and the veto committee will decide whether to veto the freezing request or not.
+   - [On-chain] The DisputeResolution contract resolves that a particular operator's response is not the correct response (that is, not the square of the integer specified in the task) or the opted-in operator didn't respond during the response window. If the dispute is resolved, the operator will be frozen in the Registration contract and the veto committee will decide whether to veto the freezing request or not.
 
 Below is a more detailed uml diagram of the aggregator and operator processes:
 

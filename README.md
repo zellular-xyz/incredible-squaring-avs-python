@@ -5,6 +5,13 @@
 A Python-based implementation of the Incredible Squaring AVS middleware with full integration into EigenLayer. This repository showcases how to build and run an Actively Validated Service (AVS) using smart contracts and Python SDK clients for aggregation, operator interaction, and challenge validation.
 
 ---
+## QuitTest
+
+```bash
+make test-docker
+```
+
+---
 
 ## Dependencies
 

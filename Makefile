@@ -66,7 +66,7 @@ set-allocation-delay-and-modify-allocation: set-allocation-delay modify-allocati
 deploy-all: deploy-eigenlayer deploy-avs uam-permissions create-quorum
 
 start-anvil-with-state:
-	anvil --load-state contracts/state.json --print-traces -vvvvv
+	anvil --load-state tests/anvil/avs-and-eigenlayer-deployed-anvil-state/state.json --print-traces -vvvvv
 
 ___PYTHON_SETUP___: ## 
 

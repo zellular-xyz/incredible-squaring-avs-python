@@ -22,10 +22,6 @@ RUN wget https://github.com/herumi/mcl/archive/refs/tags/v1.93.zip \
 # Install development tools
 RUN pip install black mypy flake8
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
 # Copy the entire project
 COPY . .
 

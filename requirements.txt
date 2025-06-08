@@ -1,6 +1,0 @@
--e git+https://github.com/zellular-xyz/eigensdk-python.git#egg=eigensdk
-
-# Other dependencies
-web3==7.12.0
-PyYAML==6.0.2
-Flask==3.1.1

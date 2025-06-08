@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def start_anvil_and_deploy_contracts():
     """start anvil and deploy contracts"""
     anvil_process = subprocess.Popen(
-        ["anvil", "--load-state", "contracts/state.json", "--print-traces", "-vvvvv"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+        ["anvil", "--load-state", "tests/anvil/avs-and-eigenlayer-deployed-anvil-state/state.json", "--print-traces", "-vvvvv"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
     return anvil_process
 

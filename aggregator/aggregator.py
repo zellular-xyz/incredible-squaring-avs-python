@@ -158,7 +158,8 @@ class Aggregator:
             task_num += 1
             time.sleep(10)
 
-    def __verify_signature(self, data, operators):
+    @staticmethod
+    def __verify_signature(data, operators):
         """Verify the operator's signature."""
         if data["operator_id"] not in operators:
             raise OperatorNotRegisteredError()

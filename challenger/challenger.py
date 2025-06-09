@@ -36,7 +36,7 @@ class TaskResponse:
     reference_task_index: int
 
     def to_tuple(self):
-        return (self.reference_task_index, self.number_squared)
+        return self.reference_task_index, self.number_squared
 
 
 @dataclass
@@ -45,7 +45,7 @@ class TaskResponseMetadata:
     hash_of_non_signers: bytes
 
     def to_tuple(self):
-        return (self.task_responsed_block, self.hash_of_non_signers)
+        return self.task_responsed_block, self.hash_of_non_signers
 
 
 @dataclass
@@ -107,7 +107,7 @@ class Challenger:
         self.task_response_channel = None
         self.new_task_created_channel = None
 
-    def start(self, context) -> None:
+    def start(self) -> None:
         """Start the challenger service."""
         logger.debug("Starting Challenger.")
 
@@ -408,4 +408,4 @@ if __name__ == "__main__":
         avs_config = yaml.load(f, Loader=yaml.BaseLoader)
 
     challenger = Challenger(config={**challenger_config, **avs_config})
-    challenger.start(None)
+    challenger.start()

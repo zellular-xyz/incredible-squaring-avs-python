@@ -8,6 +8,7 @@ A Python-based implementation of the Incredible Squaring AVS middleware with ful
 ## QuitTest
 
 ```bash
+make build-docker
 make test-docker
 ```
 

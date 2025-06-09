@@ -9,10 +9,15 @@ import requests
 import yaml
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
 from eigensdk.chainio.utils import nums_to_bytes
-from eigensdk.crypto.bls.attestation import (G1Point, G2Point, Signature,
-                                             g1_to_tupple, g2_to_tupple,
-                                             new_zero_g1_point,
-                                             new_zero_g2_point)
+from eigensdk.crypto.bls.attestation import (
+    G1Point,
+    G2Point,
+    Signature,
+    g1_to_tupple,
+    g2_to_tupple,
+    new_zero_g1_point,
+    new_zero_g2_point,
+)
 from eth_account import Account
 from flask import Flask, jsonify, request
 from web3 import Web3

@@ -22,6 +22,10 @@ RUN wget https://github.com/herumi/mcl/archive/refs/tags/v1.93.zip \
 # Install development tools
 RUN pip install black mypy flake8
 
+# Install dependencies
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
+
 # Copy the entire project
 COPY . .
 

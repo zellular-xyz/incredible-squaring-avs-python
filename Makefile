@@ -69,15 +69,6 @@ deploy-all: deploy-eigenlayer deploy-avs uam-permissions create-quorum
 start-anvil-with-state:
 	anvil --load-state tests/anvil/avs-and-eigenlayer-deployed-anvil-state/state.json --print-traces -vvvvv
 
-___PYTHON_SETUP___: ## 
-
-setup-and-activate: ## Create venv, activate it, and install dependencies
-	python3 -m venv .venv && \
-	bash -c "source .venv/bin/activate && \
-	pip install -r requirements.txt && \
-	echo 'Virtual environment created, activated, and dependencies installed.' && \
-	echo 'For future sessions, activate with: source .venv/bin/activate'"
-
 __CLI__: ## 
 
 cli-setup-operator: send-fund cli-register-operator-with-eigenlayer cli-deposit-into-mocktoken-strategy cli-register-operator-with-avs ## registers operator with eigenlayer and avs
@@ -96,18 +87,6 @@ cli-deregister-operator-with-avs: ##
 
 send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 	cast send 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --value 10ether --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
-
------------------------------: ## 
-____OFFCHAIN_SOFTWARE___: ## 
-start-aggregator: ## 
-	python -m aggregator.main
-
-start-operator: ## 
-	python -m operator.main
-
-start-challenger: ## 
-	python -m challenger.main
-
 
 __REWARDS__: ##
 

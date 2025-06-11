@@ -42,7 +42,6 @@ check-all: format-check lint mypy ## Run all code quality checks
 ___CONTRACTS___: ## 
 
 build-contracts: ## builds all contracts
-	git clone https://github.com/dapphub/ds-test.git contracts/lib/eigenlayer-middleware/lib/ds-test
 	cd contracts && forge build
 
 deploy-eigenlayer: ## Deploy eigenlayer

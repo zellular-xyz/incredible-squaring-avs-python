@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir ".[dev]"
 # Copy the entire project
 COPY . .
 
-# Install the project in editable mode
-RUN pip install --no-cache-dir .
+# Install the project
+RUN pip install --no-deps --no-cache-dir .
 
 # Default command
 CMD ["make", "test"]

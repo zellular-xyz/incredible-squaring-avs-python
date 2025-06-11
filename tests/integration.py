@@ -100,22 +100,24 @@ if __name__ == "__main__":
     print("task_hash", task_hash)
     print("task_response_hash", task_response_hash)
     empty_bytes = b"\x00" * 32
-    if not (task_hash != empty_bytes and task_response_hash != empty_bytes):
-        print("task_hash or task_response_hash is empty")
-        print("FAILED")
-    else:
-        print("task_hash and task_response_hash are not empty")
-        print("PASSED")
-
-    print("Cleaning up processes...")
-    operator1.stop()
-    operator2.stop()
-    operator3.stop()
-    aggregator.stop()
-    operator_thread1.join()
-    operator_thread2.join()
-    operator_thread3.join()
-    anvil_process.terminate()
-    print("Cleanup complete")
-    # pid = os.getpid()
-    # os.kill(pid, 9)
+    try:
+        if not (task_hash != empty_bytes and task_response_hash != empty_bytes):
+            print("task_hash or task_response_hash is empty")
+            print("FAILED")
+            exit(1)
+        else:
+            print("task_hash and task_response_hash are not empty")
+            print("PASSED")
+    finally:
+        print("Cleaning up processes...")
+        operator1.stop()
+        operator2.stop()
+        operator3.stop()
+        aggregator.stop()
+        operator_thread1.join()
+        operator_thread2.join()
+        operator_thread3.join()
+        anvil_process.terminate()
+        print("Cleanup complete")
+        # pid = os.getpid()
+        # os.kill(pid, 9)

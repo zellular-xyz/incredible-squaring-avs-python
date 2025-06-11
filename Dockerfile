@@ -19,19 +19,15 @@ RUN wget https://github.com/herumi/mcl/archive/refs/tags/v1.93.zip \
     && cd /app \
     && rm -rf mcl-1.93 v1.93.zip
 
-# Install development tools
-RUN pip install black mypy flake8
-
 # Install dependencies
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
+RUN pip install --no-cache-dir ".[dev]"
 
 # Copy the entire project
 COPY . .
 
 # Install the project in editable mode
-RUN pip install -e .
-RUN pip install -e ".[dev]"
+RUN pip install --no-cache-dir .
 
 # Default command
 CMD ["make", "test"]

@@ -28,6 +28,14 @@ class Task:
             self.quorum_numbers,
             self.quorum_threshold_percentage,
         )
+    
+    def to_json(self):
+        return {
+            "number_to_be_squared": self.number_to_be_squared,
+            "task_created_block": self.task_created_block,
+            "quorum_numbers": self.quorum_numbers.hex(),
+            "quorum_threshold_percentage": self.quorum_threshold_percentage,
+        }
 
 
 @dataclass
@@ -38,6 +46,13 @@ class TaskResponse:
     def to_tuple(self):
         return self.reference_task_index, self.number_squared
 
+    def to_json(self):
+
+        return {
+            "number_squared": self.number_squared,
+            "reference_task_index": self.reference_task_index,
+        }
+
 
 @dataclass
 class TaskResponseMetadata:
@@ -46,6 +61,12 @@ class TaskResponseMetadata:
 
     def to_tuple(self):
         return self.task_responsed_block, self.hash_of_non_signers
+    
+    def to_json(self):
+        return {
+            "task_responsed_block": self.task_responsed_block,
+            "hash_of_non_signers": self.hash_of_non_signers.hex(),
+        }
 
 
 @dataclass
@@ -53,6 +74,14 @@ class TaskResponseData:
     task_response: TaskResponse
     task_response_metadata: TaskResponseMetadata
     non_signing_operator_pub_keys: List[dict]
+
+    def to_json(self):
+
+        return {
+            "task_response": self.task_response.to_json(),
+            "task_response_metadata": self.task_response_metadata.to_json(),
+            "non_signing_operator_pub_keys": self.non_signing_operator_pub_keys,
+        }
 
 
 # Define specific error types
@@ -104,8 +133,10 @@ class Challenger:
         self.__load_task_manager()
         self.tasks: Dict[int, Task] = {}
         self.task_responses: Dict[int, TaskResponseData] = {}
+        self.challenge_hashes: Dict[int, str] = {}
         self.task_response_channel = None
         self.new_task_created_channel = None
+        self._stop_flag = False
 
     def start(self) -> None:
         """Start the challenger service."""
@@ -122,7 +153,7 @@ class Challenger:
         )
 
         logger.debug("Listening for new events...")
-        while True:
+        while not self._stop_flag:
             try:
                 # Handle new task created events
                 for event in new_task_sub.get_new_entries():
@@ -178,6 +209,11 @@ class Challenger:
             except Exception as e:
                 logger.error(f"Error in event processing: {str(e)}")
                 time.sleep(5)
+
+    def stop(self):
+        """Stop the challenger service."""
+        logger.debug("Stopping Challenger.")
+        self._stop_flag = True
 
     def process_new_task_created_log(self, new_task_created_log) -> int:
         """Process new task creation log."""
@@ -324,6 +360,7 @@ class Challenger:
             "Challenge raised",
             extra={"challengeTxHash": receipt["transactionHash"].hex()},
         )
+        self.challenge_hashes[task_index] = receipt["transactionHash"].hex()
 
     def __load_ecdsa_key(self):
         """Load the ECDSA private key"""

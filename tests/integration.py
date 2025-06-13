@@ -3,11 +3,13 @@ import os
 import subprocess
 import threading
 import time
+import json
 
 import yaml
 
 from squaring_operator.squaring_operator import SquaringOperator
 from tests.mocks import MockAggregator
+from challenger.challenger import Challenger
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -79,6 +81,30 @@ def start_aggregator():
     return aggregator, aggregator_thread
 
 
+def start_challenger():
+    """start challenger"""
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+
+    challenger_config_path = os.path.join(dir_path, "../config-files/challenger.yaml")
+    if not os.path.exists(challenger_config_path):
+        logger.error(f"Config file not found at: {challenger_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {challenger_config_path}")
+    with open(challenger_config_path, "r") as f:
+        challenger_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    challenger = Challenger(config={**challenger_config, **avs_config})
+    challenger_thread = threading.Thread(target=challenger.start, daemon=True)
+    challenger_thread.start()
+    return challenger, challenger_thread
+
+
 if __name__ == "__main__":
     print("Starting anvil")
     anvil_process = start_anvil_and_deploy_contracts()
@@ -91,33 +117,70 @@ if __name__ == "__main__":
     print("Starting aggregator")
     aggregator, aggregator_thread = start_aggregator()
     print("aggregator started")
+    print("Starting challenger")
+    challenger, challenger_thread = start_challenger()
+    print("challenger started")
     print("Waiting for 10 seconds")
     time.sleep(10)
-    print("Checking task manager")
-    task_manager = aggregator.task_manager
-    task_hash = task_manager.functions.allTaskHashes(0).call()
-    task_response_hash = task_manager.functions.allTaskResponses(0).call()
-    print("task_hash", task_hash)
-    print("task_response_hash", task_response_hash)
-    empty_bytes = b"\x00" * 32
+    print("Analysing task & task response")
+    task = challenger.tasks.get(0)
+    task_response = challenger.task_responses.get(0)
+    challenge_hash = challenger.challenge_hashes.get(0)
+
     try:
-        if not (task_hash != empty_bytes and task_response_hash != empty_bytes):
-            print("task_hash or task_response_hash is empty")
-            print("FAILED")
-            exit(1)
+        if task is None:
+            raise Exception("Task is None")
         else:
-            print("task_hash and task_response_hash are not empty")
-            print("PASSED")
+            print("\nTask:")
+            print(json.dumps(task.to_json(), indent=2))
+        if task_response is None:
+            raise Exception("Task response is None")
+        else:
+            print("\nTask Response:")
+            print(json.dumps(task_response.to_json(), indent=2))
+
+        is_response_wrong = (
+            task_response.task_response.number_squared
+            != task.number_to_be_squared ** 2
+        )
+        if is_response_wrong and challenge_hash is None:
+            raise Exception("Response is wrong, but no challenge was raised")
+        elif not is_response_wrong and challenge_hash is not None:
+            raise Exception("Response is correct, but challenge was raised")
+
+        print("================================================")
+        print(
+            f"A task was created to square {task.number_to_be_squared} in block {task.task_created_block}"
+        )
+        print(
+            f"The task was responded to with {task_response.task_response.number_squared} in block {task_response.task_response_metadata.task_responsed_block}"
+        )
+        if is_response_wrong and challenge_hash is not None:
+            print(f"Response is wrong, and challenge was raised: {challenge_hash}")
+        else:
+            print("Response is correct, and no challenge was raised") 
+        print("PASSED")
+        print("================================================")
+
+    except Exception as e:
+        print("================================================")
+        print("FAILED")
+        print(f"Error: {e}")
+        print("================================================")
+        exit(1)
+
     finally:
         print("Cleaning up processes...")
         operator1.stop()
         operator2.stop()
         operator3.stop()
         aggregator.stop()
+        challenger.stop()
         operator_thread1.join()
         operator_thread2.join()
         operator_thread3.join()
+        challenger_thread.join()
         anvil_process.terminate()
         print("Cleanup complete")
-        # pid = os.getpid()
-        # os.kill(pid, 9)
+        pid = os.getpid()
+        os.kill(pid, 9)

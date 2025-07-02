@@ -1,0 +1,14 @@
+{
+  "holesky": {
+    "BLSApkRegistry": {
+      "address": "0x431cDf46f5Bf2D0bD976Ab1589A90390499DD802",
+      "startBlock": 1722790
+    },
+    "RegistryCoordinator": {
+      "address": "0xC4Dac071E09dA665152c9a180e973Dd7d51fA1E9"
+    },
+    "StakeRegistry": {
+      "address": "0x5F3C12aC8298bc49f526B0EdC152e7dD4184c101"
+    }
+  }
+}

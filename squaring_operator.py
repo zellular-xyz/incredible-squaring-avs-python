@@ -394,14 +394,14 @@ class SquaringOperator:
 if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    operator_config_path = os.path.join(dir_path, "../config-files/operator1.yaml")
+    operator_config_path = os.path.join(dir_path, "./config-files/operator1.yaml")
     if not os.path.exists(operator_config_path):
         logger.error(f"Config file not found at: {operator_config_path}")
         raise FileNotFoundError(f"Config file not found at: {operator_config_path}")
     with open(operator_config_path, "r") as f:
         operator_config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    avs_config_path = os.path.join(dir_path, "./config-files/avs.yaml")
     if not os.path.exists(avs_config_path):
         logger.error(f"Config file not found at: {avs_config_path}")
         raise FileNotFoundError(f"Config file not found at: {avs_config_path}")

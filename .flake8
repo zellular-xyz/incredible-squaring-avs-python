@@ -1,2 +1,5 @@
 [flake8]
 ignore = E501, C901, W503, W504
+exclude = .venv,build,dist,migrations
+max-line-length = 127
+max-complexity = 10

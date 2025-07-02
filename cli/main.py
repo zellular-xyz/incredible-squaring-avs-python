@@ -117,7 +117,7 @@ def main():
         success = register_with_avs(config_path=config_path)
     elif args.command == "deregister-from-avs":
         success = deregister_from_avs(config_path=config_path)
-    elif args.command == "deposit":
+    elif args.command == "deposit-into-strategy":
         success = deposit_into_strategy(config_path=config_path)
     else:
         raise RuntimeError("programming mistake!")

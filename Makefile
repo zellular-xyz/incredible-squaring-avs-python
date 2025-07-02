@@ -100,13 +100,13 @@ send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 -----------------------------: ## 
 ____OFFCHAIN_SOFTWARE___: ## 
 start-aggregator: ## 
-	python -m aggregator.main
+	python -m aggregator
 
 start-operator: ## 
-	python -m operator.main
+	python -m squaring_operator
 
 start-challenger: ## 
-	python -m challenger.main
+	python -m challenger
 
 
 __REWARDS__: ##

@@ -11,9 +11,7 @@ from squaring_operator import SquaringOperator
 logger = logging.getLogger(__name__)
 
 
-def register_with_avs(config_path):
-    with open(config_path) as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
+def register_with_avs(config):
     operator = SquaringOperator(config=config)
     operator.set_appointee(
         account_address=config["operator_address"],
@@ -36,9 +34,7 @@ def register_with_avs(config_path):
     return True
 
 
-def deregister_from_avs(config_path):
-    with open(config_path) as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
+def deregister_from_avs(config):
     operator = SquaringOperator(config=config)
     receipt = operator.deregister_from_operator_sets([0])
     if receipt.status != 1:
@@ -48,9 +44,7 @@ def deregister_from_avs(config_path):
     return True
 
 
-def register_with_eigenlayer(config_path):
-    with open(config_path) as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
+def register_with_eigenlayer(config):
     operator = SquaringOperator(config=config)
     receipt = operator.register_operator_with_eigenlayer()
     if receipt.status != 1:
@@ -60,9 +54,7 @@ def register_with_eigenlayer(config_path):
     return True
 
 
-def deposit_into_strategy(config_path):
-    with open(config_path) as f:
-        config = yaml.load(f, Loader=yaml.SafeLoader)
+def deposit_into_strategy(config):
     operator = SquaringOperator(config=config)
     operator.deposit_into_strategy(config["token_strategy_addr"], 1000000000000000000)
     logger.info(
@@ -70,6 +62,12 @@ def deposit_into_strategy(config_path):
     )
     return True
 
+def load_config(operator_config_path):
+    with open(operator_config_path) as f:
+        operator_config = yaml.load(f, Loader=yaml.BaseLoader)
+    with open("config-files/avs.yaml") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+    return {**operator_config, **avs_config}
 
 def main():
     parser = argparse.ArgumentParser(description="Incredible Squaring AVS CLI")
@@ -110,15 +108,16 @@ def main():
         sys.exit(1)
 
     config_path = args.config
+    config = load_config(config_path)
 
     if args.command == "register-with-eigenlayer":
-        success = register_with_eigenlayer(config_path=config_path)
+        success = register_with_eigenlayer(config)
     elif args.command == "register-with-avs":
-        success = register_with_avs(config_path=config_path)
+        success = register_with_avs(config)
     elif args.command == "deregister-from-avs":
-        success = deregister_from_avs(config_path=config_path)
+        success = deregister_from_avs(config)
     elif args.command == "deposit-into-strategy":
-        success = deposit_into_strategy(config_path=config_path)
+        success = deposit_into_strategy(config)
     else:
         raise RuntimeError("programming mistake!")
 

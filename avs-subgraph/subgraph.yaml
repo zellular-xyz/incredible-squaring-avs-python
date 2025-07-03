@@ -8,7 +8,7 @@ dataSources:
     name: BLSApkRegistry
     network: mainnet
     source:
-      address: "0xFD471836031dc5108809D173A067e8486B9047A3"
+      address: "0x1429859428c0abc9c2c47c8ee9fbaf82cfa0f20f"
       abi: BLSApkRegistry
       startBlock: 1
     mapping:
@@ -28,7 +28,7 @@ dataSources:
     name: RegistryCoordinator
     network: mainnet
     source:
-      address: "0x7bc06c482dead17c0e297afbc32f6e63d3846650"
+      address: "0xfd471836031dc5108809d173a067e8486b9047a3"
       abi: RegistryCoordinator
       startBlock: 1
     mapping:
@@ -55,7 +55,7 @@ dataSources:
     name: StakeRegistry
     network: mainnet
     source:
-      address: "0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"
+      address: "0x2bdcc0de6be1f7d2ee689a0342d76f52e8efaba3"
       abi: StakeRegistry
       startBlock: 1
     mapping:

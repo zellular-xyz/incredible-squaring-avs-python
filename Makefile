@@ -85,7 +85,7 @@ ___PYTHON_SETUP___: ##
 setup-and-activate: ## Create venv, activate it, and install dependencies
 	python3 -m venv .venv && \
 	bash -c "source .venv/bin/activate && \
-	pip install -r requirements.txt && \
+	pip install . && \
 	echo 'Virtual environment created, activated, and dependencies installed.' && \
 	echo 'For future sessions, activate with: source .venv/bin/activate'"
 

@@ -271,7 +271,7 @@ class Aggregator:
                 data["block_number"],
                 [0],
                 [
-                    int(operator_id, 16)
+                    bytes.fromhex(operator_id[2:])
                     for operator_id in operators
                     if operator_id not in signer_operator_ids
                 ],

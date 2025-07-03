@@ -62,12 +62,14 @@ def deposit_into_strategy(config):
     )
     return True
 
+
 def load_config(operator_config_path):
     with open(operator_config_path) as f:
         operator_config = yaml.load(f, Loader=yaml.BaseLoader)
     with open("config-files/avs.yaml") as f:
         avs_config = yaml.load(f, Loader=yaml.BaseLoader)
     return {**operator_config, **avs_config}
+
 
 def main():
     parser = argparse.ArgumentParser(description="Incredible Squaring AVS CLI")

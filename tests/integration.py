@@ -1,10 +1,14 @@
 import logging
 import os
 import subprocess
+import sys
 import threading
 import time
+from pathlib import Path
 
 import yaml
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from squaring_operator import SquaringOperator
 from tests.mocks import MockAggregator

@@ -31,8 +31,8 @@ format: ## Format code with black and isort
 	isort .
 
 format-check: ## Check if code is properly formatted
-	black --check squaring_operator.py aggregator.py challenger.py cli/main.py
-	isort --check-only squaring_operator.py aggregator.py challenger.py cli/main.py
+	black --check squaring_operator.py aggregator.py challenger.py cli tests
+	isort --check-only squaring_operator.py aggregator.py challenger.py cli tests
 
 mypy: ## Run type checking with mypy
 	mypy .

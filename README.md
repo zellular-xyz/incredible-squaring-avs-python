@@ -48,8 +48,10 @@ This simple session illustrates the basic flow of the AVS. The makefile commands
 Start anvil in a separate terminal:
 
 ```bash
-anvil
+anvil --host 0.0.0.0
 ```
+
+**Note:** Using `--host 0.0.0.0` enables the subgraph node to connect to the anvil chain.
 
 Build the contracts:
 
@@ -63,12 +65,23 @@ Deploy contracts, set UAM permissions, and create a quorum in a single command:
 make deploy-all
 ```
 
-Clone the the [graph-node]():
+Start the graph node:
 
 ```bash
-
+make start-graph-node
 ```
 
+**Note:** To start the graph node from scratch, remove the `data` folder inside the `avs-subgraph` using:
+
+```bash
+rm avs-subgraph/data -rf
+```
+
+Deploy the subgraph:
+
+```bash
+make deploy-subgraph
+```
 
 Start the aggregator:
 

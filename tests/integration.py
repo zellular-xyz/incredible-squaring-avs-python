@@ -6,7 +6,7 @@ import time
 
 import yaml
 
-from squaring_operator.squaring_operator import SquaringOperator
+from squaring_operator import SquaringOperator
 from tests.mocks import MockAggregator
 
 logging.basicConfig(level=logging.INFO)

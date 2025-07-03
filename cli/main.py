@@ -6,7 +6,7 @@ import sys
 import yaml
 from web3 import Web3
 
-from squaring_operator.squaring_operator import SquaringOperator
+from squaring_operator import SquaringOperator
 
 logger = logging.getLogger(__name__)
 

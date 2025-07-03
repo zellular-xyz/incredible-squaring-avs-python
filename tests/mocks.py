@@ -1,6 +1,6 @@
 from eigensdk.crypto.bls.attestation import G1Point, G2Point
 
-from aggregator.aggregator import Aggregator
+from aggregator import Aggregator
 
 
 class MockAggregator(Aggregator):

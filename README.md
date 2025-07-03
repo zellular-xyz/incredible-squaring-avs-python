@@ -17,9 +17,11 @@ foundryup
 
 ## Install
 
-Install Python dependencies using:
+Create a virtual environment and install Python dependencies using:
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
 pip install .
 ```
 

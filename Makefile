@@ -69,6 +69,17 @@ deploy-all: deploy-eigenlayer deploy-avs uam-permissions create-quorum
 start-anvil-with-state:
 	anvil --load-state tests/anvil/avs-and-eigenlayer-deployed-anvil-state/state.json --print-traces -vvvvv
 
+start-graph-node:
+	docker compose -f avs-subgraph/docker-compose.yml  up
+
+deploy-subgraph:
+	cd avs-subgraph && \
+	graph codegen && \
+	graph build && \
+	graph create --node http://localhost:8020/ avs-subgraph && \
+	graph deploy -l v1 --node http://localhost:8020/ --ipfs http://localhost:5001 avs-subgraph
+
+
 ___PYTHON_SETUP___: ## 
 
 setup-and-activate: ## Create venv, activate it, and install dependencies

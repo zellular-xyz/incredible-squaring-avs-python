@@ -1,82 +1,94 @@
 # Incredible Squaring AVS (Python Edition)
 
-> **Do not use in production. Testnet only.**
+<b> Do not use it in Production, testnet only. </b>
 
-A Python-based implementation of the Incredible Squaring AVS middleware with full integration into EigenLayer. This repository showcases how to build and run an Actively Validated Service (AVS) using smart contracts and Python SDK clients for aggregation, operator interaction, and challenge validation.
-
----
-## QuitTest
-
-```bash
-make build-docker
-make test-docker
-```
-
----
+An implementation of the EigenLayer [Incredible Squaring AVS](https://github.com/Layr-Labs/incredible-squaring-avs) in Python. This repository showcases how to use [EigenLayer Python SDK](https://github.com/zellular-xyz/eigensdk-python/) to build an Autonomous Verifiable Service (AVS) in Python.
 
 ## Dependencies
 
-* Python 3.12+
-* [Foundry](https://book.getfoundry.sh/getting-started/installation) for compiling and deploying contracts
-* `pip` dependencies (see `requirements.txt`)
+1. [Foundry](https://book.getfoundry.sh/getting-started/installation):
 
-Install Foundry:
-
-```bash
+``` bash
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-Build contracts:
+2. [Docker](https://docs.docker.com/get-docker/)
+
+## Install
+
+Install Python dependencies using:
 
 ```bash
-make build-contracts
+pip install .
 ```
 
-Install Python dependencies:
-
-```bash
-pip install -r requirements.txt
-pip install -e .
-```
-
-For development (includes linting, type checking, and formatting tools):
+For development (includes linting, type checking, and formatting tools) install the repository using:
 
 ```bash
 pip install -e ".[dev]"
 ```
 
----
+Install latest version of node and required dependencies for deploying subgraph:
 
-## Running the Project
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+\. "$HOME/.nvm/nvm.sh"
+nvm install 22
 
-### 1. Start Local Testnet (Anvil)
+cd avs-subgraph
+npm i -g @graphprotocol/graph-cli@latest
+npm i
+```
+
+## Running via make
+
+This simple session illustrates the basic flow of the AVS. The makefile commands are hardcoded for a single operator, but it's however easy to create new operator config files, and start more operators manually (see the actual commands that the makefile calls).
+
+Start anvil in a separate terminal:
 
 ```bash
 anvil
 ```
 
-### 2. Deploy Contracts & Setup AVS
+Build the contracts:
+
+``` bash
+make build-contracts
+```
+
+Deploy contracts, set UAM permissions, and create a quorum in a single command:
 
 ```bash
 make deploy-all
 ```
 
-### 3. Run Aggregator (Python version)
+Clone the the [graph-node]():
+
+```bash
+
+```
+
+
+Start the aggregator:
 
 ```bash
 make start-aggregator
 ```
 
-### 4. Run Operator (Python version)
+Register the operator with eigenlayer and incredible-squaring, and then start the process:
 
 ```bash
 make start-operator
 ```
 
-> The operator will register itself automatically by default. To disable this, set `register_operator_on_startup: false` in the config.
+By default, the `start-operator` command will also register the operator.
+To disable this, set `register_operator_on_startup` to false in `config-files/operator.anvil.yaml`.
+The operator can be manually registered by running `make cli-setup-operator`.
 
-### 5. Run Challenger (Optional, to test slashing)
+The operator will produce an invalid result 10 times out of 100, as it is set in the `times_failing` field of the config.
+These failures result in slashing once they're challenged.
+To see this in action, start the challenger with:
 
 ```bash
 make start-challenger
@@ -102,7 +114,12 @@ make claim-distributions
 make claimer-account-token-balance
 ```
 
----
+## QuitTest
+
+```bash
+make build-docker
+make test-docker
+```
 
 ## Architecture Overview
 

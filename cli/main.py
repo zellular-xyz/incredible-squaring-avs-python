@@ -94,7 +94,7 @@ def main():
     for cmd, _ in commands.items():
         cmd_parser = subparsers.add_parser(cmd)
         cmd_parser.add_argument(
-            "--config", type=str, default="config-files/operator.anvil.yaml"
+            "--config", type=str, default="config-files/operator1.anvil.yaml"
         )
 
     args = parser.parse_args()

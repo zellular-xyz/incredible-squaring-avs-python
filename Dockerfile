@@ -19,11 +19,12 @@ RUN wget https://github.com/herumi/mcl/archive/refs/tags/v1.93.zip \
     && cd /app \
     && rm -rf mcl-1.93 v1.93.zip
 
+# Install the project in editable mode
+COPY pyproject.toml .
+RUN pip install --no-cache-dir -e .[dev]
+
 # Copy the entire project
 COPY . .
-
-# Install the project in editable mode
-RUN pip install -e ".[dev]"
 
 # Default command
 CMD ["make", "test"]

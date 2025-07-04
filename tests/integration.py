@@ -8,10 +8,11 @@ from pathlib import Path
 
 import yaml
 
+from tests.mocks import MockAggregator
+
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
-from squaring_operator import SquaringOperator
-from tests.mocks import MockAggregator
+from squaring_operator import SquaringOperator  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -83,43 +84,48 @@ def start_aggregator():
     return aggregator, aggregator_thread
 
 
-if __name__ == "__main__":
+def test_incredible_squaring_e2e():
     print("Starting anvil")
     anvil_process = start_anvil_and_deploy_contracts()
     print("Anvil started")
+
     print("Starting operators")
     operator1, operator_thread1 = start_operator(1)
     operator2, operator_thread2 = start_operator(2)
     operator3, operator_thread3 = start_operator(3)
-    print("operators started")
+    print("Operators started")
+
     print("Starting aggregator")
     aggregator, aggregator_thread = start_aggregator()
-    print("aggregator started")
-    print("Waiting for 10 seconds")
-    time.sleep(10)
-    print("Checking task manager")
-    task_manager = aggregator.task_manager
-    task_hash = task_manager.functions.allTaskHashes(0).call()
-    task_response_hash = task_manager.functions.allTaskResponses(0).call()
-    print("task_hash", task_hash)
-    print("task_response_hash", task_response_hash)
-    empty_bytes = b"\x00" * 32
-    if not (task_hash != empty_bytes and task_response_hash != empty_bytes):
-        print("task_hash or task_response_hash is empty")
-        print("FAILED")
-    else:
-        print("task_hash and task_response_hash are not empty")
+    print("Aggregator started")
+
+    try:
+        print("Waiting for 10 seconds")
+        time.sleep(10)
+
+        print("Checking task manager")
+        task_manager = aggregator.task_manager
+        task_hash = task_manager.functions.allTaskHashes(0).call()
+        task_response_hash = task_manager.functions.allTaskResponses(0).call()
+
+        print("task_hash", task_hash)
+        print("task_response_hash", task_response_hash)
+
+        empty_bytes = b"\x00" * 32
+
+        assert task_hash != empty_bytes, "Task hash is empty"
+        assert task_response_hash != empty_bytes, "Task response hash is empty"
+
         print("PASSED")
 
-    print("Cleaning up processes...")
-    operator1.stop()
-    operator2.stop()
-    operator3.stop()
-    aggregator.stop()
-    operator_thread1.join()
-    operator_thread2.join()
-    operator_thread3.join()
-    anvil_process.terminate()
-    print("Cleanup complete")
-    # pid = os.getpid()
-    # os.kill(pid, 9)
+    finally:
+        print("Cleaning up processes...")
+        operator1.stop()
+        operator2.stop()
+        operator3.stop()
+        aggregator.stop()
+        operator_thread1.join()
+        operator_thread2.join()
+        operator_thread3.join()
+        anvil_process.terminate()
+        print("Cleanup complete")

@@ -49,6 +49,13 @@ npm i -g @graphprotocol/graph-cli@latest
 npm i
 ```
 
+## Quick Test
+
+```bash
+make build-docker
+make test-docker
+```
+
 ## Running via make
 
 This simple session illustrates the basic flow of the AVS. The makefile commands are hardcoded for a single operator, but it's however easy to create new operator config files, and start more operators manually (see the actual commands that the makefile calls).
@@ -79,11 +86,7 @@ Start the graph node:
 make start-graph-node
 ```
 
-**Note:** To start the graph node from scratch, remove the `data` folder inside the `avs-subgraph` using:
-
-```bash
-rm avs-subgraph/data -rf
-```
+**Note:** To start the graph node from scratch, remove the `data` folder inside the `avs-subgraph` using `rm avs-subgraph/data -rf` before starting the subgraph.
 
 Deploy the subgraph:
 
@@ -115,8 +118,6 @@ To see this in action, start the challenger with:
 make start-challenger
 ```
 
----
-
 ## Distribution & Reward Claims
 
 ### Equal Distribution:
@@ -135,12 +136,6 @@ make claim-distributions
 make claimer-account-token-balance
 ```
 
-## QuitTest
-
-```bash
-make build-docker
-make test-docker
-```
 
 ## Architecture Overview
 

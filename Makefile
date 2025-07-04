@@ -11,7 +11,7 @@ rebuild:
 ___TESTS___: ## 
 
 test:
-	python ./tests/integration.py
+	pytest -s ./tests/test_integration.py
 
 build-docker:
 	docker build -t incredible-squaring-avs .

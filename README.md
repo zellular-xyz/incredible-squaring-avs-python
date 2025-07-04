@@ -21,6 +21,14 @@ Node.js 20+ with npm is required to build and deploy the subgraph to a local Gra
 
 [Docker](https://docs.docker.com/get-docker/)  is required to run the Graph Node and IPFS services using Docker Compose, and to run the Docker-based tests.
 
+
+## Quick Test (using Docker)
+
+```bash
+make build-docker
+make test-docker
+```
+
 ## Install
 
 Create a virtual environment and install Python dependencies using:
@@ -47,13 +55,6 @@ nvm install 22
 cd avs-subgraph
 npm i -g @graphprotocol/graph-cli@latest
 npm i
-```
-
-## Quick Test
-
-```bash
-make build-docker
-make test-docker
 ```
 
 ## Running via make

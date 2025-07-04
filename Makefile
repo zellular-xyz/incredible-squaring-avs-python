@@ -94,16 +94,16 @@ __CLI__: ##
 cli-setup-operator: send-fund cli-register-operator-with-eigenlayer cli-deposit-into-mocktoken-strategy cli-register-operator-with-avs ## registers operator with eigenlayer and avs
 
 cli-register-operator-with-eigenlayer: ## registers operator with delegationManager
-	python -m cli.main register-with-eigenlayer
+	./.venv/bin/python -m cli.main register-with-eigenlayer
 
 cli-deposit-into-mocktoken-strategy: ## 
-	python -m cli.main deposit
+	./.venv/bin/python -m cli.main deposit
 
 cli-register-operator-with-avs: ## 
-	python -m cli.main register-with-avs
+	./.venv/bin/python -m cli.main register-with-avs
 
 cli-deregister-operator-with-avs: ## 
-	python -m cli.main deregister-from-avs
+	./.venv/bin/python -m cli.main deregister-from-avs
 
 send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 	cast send 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --value 10ether --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
@@ -111,13 +111,13 @@ send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 -----------------------------: ## 
 ____OFFCHAIN_SOFTWARE___: ## 
 start-aggregator: ## 
-	python -m aggregator
+	./.venv/bin/python -m aggregator
 
 start-operator: ## 
-	python -m squaring_operator
+	./.venv/bin/python -m squaring_operator
 
 start-challenger: ## 
-	python -m challenger
+	./.venv/bin/python -m challenger
 
 
 __REWARDS__: ##

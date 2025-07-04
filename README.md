@@ -108,7 +108,7 @@ make start-operator
 ```
 
 By default, the `start-operator` command will also register the operator.
-To disable this, set `register_operator_on_startup` to false in `config-files/operator.anvil.yaml`.
+To disable this, set `register_operator_on_startup` to `false` in opeartor `yaml` file in the `config-files`.
 The operator can be manually registered by running `make cli-setup-operator`.
 
 The operator will produce an invalid result 10 times out of 100, as it is set in the `times_failing` field of the config.

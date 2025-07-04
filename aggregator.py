@@ -78,9 +78,9 @@ class Aggregator:
     def __init__(self, config):
         self.config = config
         self.web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
-        self.__load_ecdsa_key()
-        self.__load_clients()
-        self.__load_task_manager()
+        self._load_ecdsa_key()
+        self._load_clients()
+        self._load_task_manager()
         self.tasks = {}
         self.responses = {}
         self.app = Flask(__name__)
@@ -164,7 +164,7 @@ class Aggregator:
             time.sleep(10)
 
     @staticmethod
-    def __verify_signature(data, operators):
+    def _verify_signature(data, operators):
         """Verify the operator's signature."""
         if data["operator_id"] not in operators:
             raise OperatorNotRegisteredError()
@@ -191,7 +191,7 @@ class Aggregator:
                 raise TaskNotFoundError()
 
             operators = self.operators_info(data["block_number"])
-            self.__verify_signature(data, operators)
+            self._verify_signature(data, operators)
 
             operator_id = data["operator_id"]
 
@@ -277,7 +277,7 @@ class Aggregator:
                 ],
             )
 
-            self.__submit_aggregated_response(
+            self._submit_aggregated_response(
                 {
                     "task_index": data["task_index"],
                     "block_number": data["block_number"],
@@ -322,7 +322,7 @@ class Aggregator:
                 500,
             )
 
-    def __submit_aggregated_response(self, response):
+    def _submit_aggregated_response(self, response):
         """Submit aggregated response to the contract."""
         logger.debug(
             "Submitting aggregated response to contract",
@@ -373,7 +373,7 @@ class Aggregator:
         host, port = self.config["aggregator_server_ip_port_address"].split(":")
         self.app.run(host=host, port=int(port), use_reloader=False)
 
-    def __load_ecdsa_key(self):
+    def _load_ecdsa_key(self):
         """Load the ECDSA private key."""
         ecdsa_key_password = os.environ.get("AGGREGATOR_ECDSA_KEY_PASSWORD", "")
         if not ecdsa_key_password:
@@ -388,7 +388,7 @@ class Aggregator:
             self.aggregator_ecdsa_private_key
         ).address
 
-    def __load_clients(self):
+    def _load_clients(self):
         """Load the AVS clients."""
         cfg = BuildAllConfig(
             eth_http_url=self.config["eth_rpc_url"],
@@ -405,7 +405,7 @@ class Aggregator:
         )
         self.clients = build_all(cfg, self.aggregator_ecdsa_private_key)
 
-    def __load_task_manager(self):
+    def _load_task_manager(self):
         """Load the task manager contract."""
         service_manager_address = self.clients.avs_registry_writer.service_manager_addr
         with open("abis/IncredibleSquaringServiceManager.json") as f:

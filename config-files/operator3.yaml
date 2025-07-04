@@ -8,4 +8,4 @@ aggregator_server_ip_port_address: localhost:8090
 register_operator_on_startup: true
 operator_set_id: 0x00
 socket: operator-socket
-times_failing: 25
+times_failing: 10

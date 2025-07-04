@@ -10,11 +10,11 @@ import json
 import yaml
 
 from tests.mocks import MockAggregator
-from challenger.challenger import Challenger
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from squaring_operator import SquaringOperator  # noqa: E402
+from challenger import Challenger  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

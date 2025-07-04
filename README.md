@@ -6,14 +6,20 @@ An implementation of the EigenLayer [Incredible Squaring AVS](https://github.com
 
 ## Dependencies
 
-1. [Foundry](https://book.getfoundry.sh/getting-started/installation):
+[Foundry](https://book.getfoundry.sh/getting-started/installation) is required to build the AVS smart contracts, run a local Anvil chain, deploy contracts to Anvil, and test the Python AVS against the local setup.
+
+Install Foundry:
 
 ``` bash
 curl -L https://foundry.paradigm.xyz | bash
 foundryup
 ```
 
-2. [Docker](https://docs.docker.com/get-docker/)
+Python 3.11+ with pip is required to run the AVS binaries.
+
+Node.js 20+ with npm is required to build and deploy the subgraph to a local Graph Node.
+
+[Docker](https://docs.docker.com/get-docker/)  is required to run the Graph Node and IPFS services using Docker Compose, and to run the Docker-based tests.
 
 ## Install
 

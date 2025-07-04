@@ -1,8 +1,6 @@
 ############################# HELP MESSAGE #############################
 .PHONY: $(MAKECMDGOALS)
 
------------------------------: ## 
-
 ___BUILD___: ## 
 
 rebuild:
@@ -108,7 +106,6 @@ cli-deregister-operator-with-avs: ##
 send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 	cast send 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --value 10ether --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
 
------------------------------: ## 
 ____OFFCHAIN_SOFTWARE___: ## 
 start-aggregator: ## 
 	./.venv/bin/python -m aggregator
@@ -118,7 +115,6 @@ start-operator: ##
 
 start-challenger: ## 
 	./.venv/bin/python -m challenger
-
 
 __REWARDS__: ##
 

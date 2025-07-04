@@ -5,10 +5,12 @@ import sys
 import threading
 import time
 from pathlib import Path
+import json
 
 import yaml
 
 from tests.mocks import MockAggregator
+from challenger.challenger import Challenger
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
@@ -83,6 +85,29 @@ def start_aggregator():
     aggregator_thread.start()
     return aggregator, aggregator_thread
 
+def start_challenger():
+    """start challenger"""
+    dir_path = os.path.dirname(os.path.abspath(__file__))
+
+    challenger_config_path = os.path.join(dir_path, "../config-files/challenger.yaml")
+    if not os.path.exists(challenger_config_path):
+        logger.error(f"Config file not found at: {challenger_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {challenger_config_path}")
+    with open(challenger_config_path, "r") as f:
+        challenger_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    if not os.path.exists(avs_config_path):
+        logger.error(f"Config file not found at: {avs_config_path}")
+        raise FileNotFoundError(f"Config file not found at: {avs_config_path}")
+    with open(avs_config_path, "r") as f:
+        avs_config = yaml.load(f, Loader=yaml.BaseLoader)
+
+    challenger = Challenger(config={**challenger_config, **avs_config})
+    challenger_thread = threading.Thread(target=challenger.start, daemon=True)
+    challenger_thread.start()
+    return challenger, challenger_thread
+
 
 def test_incredible_squaring_e2e():
     print("Starting anvil")
@@ -98,6 +123,10 @@ def test_incredible_squaring_e2e():
     print("Starting aggregator")
     aggregator, aggregator_thread = start_aggregator()
     print("Aggregator started")
+
+    print("Starting challenger")
+    challenger, challenger_thread = start_challenger()
+    print("Challenger started")
 
     try:
         print("Waiting for 10 seconds")
@@ -116,7 +145,45 @@ def test_incredible_squaring_e2e():
         assert task_hash != empty_bytes, "Task hash is empty"
         assert task_response_hash != empty_bytes, "Task response hash is empty"
 
+        print("Analysing task & task response")
+        task = challenger.tasks.get(0)
+        task_response = challenger.task_responses.get(0)
+        challenge_hash = challenger.challenge_hashes.get(0)
+
+        if task is None:
+            raise Exception("Task is None")
+        else:
+            print("\nTask:")
+            print(json.dumps(task.to_json(), indent=2))
+
+        if task_response is None:
+            raise Exception("Task response is None")
+        else:
+            print("\nTask Response:")
+            print(json.dumps(task_response.to_json(), indent=2))
+
+        is_response_wrong = (
+            task_response.task_response.number_squared
+            != task.number_to_be_squared ** 2
+        )
+        if is_response_wrong and challenge_hash is None:
+            raise Exception("Response is wrong, but no challenge was raised")
+        elif not is_response_wrong and challenge_hash is not None:
+            raise Exception("Response is correct, but challenge was raised")
+
+        print("================================================")
+        print(
+            f"A task was created to square {task.number_to_be_squared} in block {task.task_created_block}"
+        )
+        print(
+            f"The task was responded to with {task_response.task_response.number_squared} in block {task_response.task_response_metadata.task_responsed_block}"
+        )
+        if is_response_wrong and challenge_hash is not None:
+            print(f"Response is wrong, and challenge was raised: {challenge_hash}")
+        else:
+            print("Response is correct, and no challenge was raised") 
         print("PASSED")
+        print("================================================")
 
     finally:
         print("Cleaning up processes...")
@@ -124,8 +191,12 @@ def test_incredible_squaring_e2e():
         operator2.stop()
         operator3.stop()
         aggregator.stop()
+        challenger.stop()
         operator_thread1.join()
         operator_thread2.join()
         operator_thread3.join()
+        challenger_thread.join()
         anvil_process.terminate()
         print("Cleanup complete")
+        pid = os.getpid()
+        os.kill(pid, 9)

@@ -95,18 +95,13 @@ class Aggregator:
         logger.debug("Starting aggregator.")
         logger.debug("Starting aggregator rpc server.")
 
-        # Start the server in a separate thread
-        server_thread = threading.Thread(target=self.start_server)
-        server_thread.daemon = True
-        server_thread.start()
-
         # Start sending new tasks
         task_thread = threading.Thread(target=self.start_sending_new_tasks)
         task_thread.daemon = True
         task_thread.start()
 
-        server_thread.join()
-        task_thread.join()
+        # Start the server
+        self.start_server()
 
     def stop(self):
         """Stop the aggregator service."""

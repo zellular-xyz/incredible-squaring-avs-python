@@ -195,7 +195,7 @@ def test_incredible_squaring_e2e():
 
         for thread in threads:
             thread.join()
-        aggregator_thread.join()
+
         challenger_thread.join()
         anvil_process.terminate()
         print("Cleanup complete")

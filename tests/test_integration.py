@@ -109,15 +109,21 @@ def start_challenger():
     return challenger, challenger_thread
 
 
+import time
+import json
+
 def test_incredible_squaring_e2e():
     print("Starting anvil")
     anvil_process = start_anvil_and_deploy_contracts()
     print("Anvil started")
 
     print("Starting operators")
-    operator1, operator_thread1 = start_operator(1)
-    operator2, operator_thread2 = start_operator(2)
-    operator3, operator_thread3 = start_operator(3)
+    operators = []
+    threads = []
+    for i in range(1, 4):
+        operator, thread = start_operator(i)
+        operators.append(operator)
+        threads.append(thread)
     print("Operators started")
 
     print("Starting aggregator")
@@ -129,72 +135,67 @@ def test_incredible_squaring_e2e():
     print("Challenger started")
 
     try:
-        print("Waiting for 10 seconds")
+        print("Waiting for 10 seconds...")
         time.sleep(10)
 
-        print("Checking task manager")
+        print("\nChecking task manager")
         task_manager = aggregator.task_manager
         task_hash = task_manager.functions.allTaskHashes(0).call()
         task_response_hash = task_manager.functions.allTaskResponses(0).call()
 
-        print("task_hash", task_hash)
-        print("task_response_hash", task_response_hash)
+        print("Task hash:", task_hash)
+        print("Task response hash:", task_response_hash)
 
         empty_bytes = b"\x00" * 32
-
         assert task_hash != empty_bytes, "Task hash is empty"
         assert task_response_hash != empty_bytes, "Task response hash is empty"
 
-        print("Analysing task & task response")
+        print("\nRetrieving task and response from challenger")
         task = challenger.tasks.get(0)
         task_response = challenger.task_responses.get(0)
         challenge_hash = challenger.challenge_hashes.get(0)
 
-        if task is None:
-            raise Exception("Task is None")
-        else:
-            print("\nTask:")
-            print(json.dumps(task.to_json(), indent=2))
+        assert task is not None, "Task not found in challenger"
+        assert task_response is not None, "Task response not found in challenger"
 
-        if task_response is None:
-            raise Exception("Task response is None")
-        else:
-            print("\nTask Response:")
-            print(json.dumps(task_response.to_json(), indent=2))
+        print("\nTask:")
+        print(json.dumps(task.to_json(), indent=2))
 
-        is_response_wrong = (
-            task_response.task_response.number_squared
-            != task.number_to_be_squared ** 2
-        )
+        print("\nTask Response:")
+        print(json.dumps(task_response.to_json(), indent=2))
+
+        # Validate squaring logic
+        correct_result = task.number_to_be_squared ** 2
+        actual_result = task_response.task_response.number_squared
+        is_response_wrong = actual_result != correct_result
+
+        # Verify challenge state
         if is_response_wrong and challenge_hash is None:
-            raise Exception("Response is wrong, but no challenge was raised")
+            raise AssertionError("Response is wrong, but no challenge was raised")
         elif not is_response_wrong and challenge_hash is not None:
-            raise Exception("Response is correct, but challenge was raised")
+            raise AssertionError("Response is correct, but a challenge was raised")
 
-        print("================================================")
-        print(
-            f"A task was created to square {task.number_to_be_squared} in block {task.task_created_block}"
-        )
-        print(
-            f"The task was responded to with {task_response.task_response.number_squared} in block {task_response.task_response_metadata.task_responsed_block}"
-        )
-        if is_response_wrong and challenge_hash is not None:
-            print(f"Response is wrong, and challenge was raised: {challenge_hash}")
+        # Output summary
+        print("\n================================================")
+        print(f"Task: square {task.number_to_be_squared} (block {task.task_created_block})")
+        print(f"Response: {actual_result} (block {task_response.task_response_metadata.task_responsed_block})")
+        if is_response_wrong:
+            print(f"Response was incorrect. Challenge raised: {challenge_hash}")
         else:
-            print("Response is correct, and no challenge was raised") 
+            print("Response was correct. No challenge raised.")
         print("PASSED")
         print("================================================")
 
     finally:
-        print("Cleaning up processes...")
-        operator1.stop()
-        operator2.stop()
-        operator3.stop()
+        print("\nCleaning up processes...")
+        for operator in operators:
+            operator.stop()
         aggregator.stop()
         challenger.stop()
-        operator_thread1.join()
-        operator_thread2.join()
-        operator_thread3.join()
+
+        for thread in threads:
+            thread.join()
+        aggregator_thread.join()
         challenger_thread.join()
         anvil_process.terminate()
         print("Cleanup complete")

@@ -198,5 +198,3 @@ def test_incredible_squaring_e2e():
         challenger_thread.join()
         anvil_process.terminate()
         print("Cleanup complete")
-        pid = os.getpid()
-        os.kill(pid, 9)

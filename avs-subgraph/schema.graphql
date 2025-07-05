@@ -1,0 +1,87 @@
+type NewPubkeyRegistration @entity(immutable: true) {
+  id: Bytes!
+  operator: Bytes! # address
+  pubkeyG1_X: BigInt! # uint256
+  pubkeyG1_Y: BigInt! # uint256
+  pubkeyG2_X: [BigInt!]! # uint256[2]
+  pubkeyG2_Y: [BigInt!]! # uint256[2]
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OperatorDeregistered @entity(immutable: true) {
+  id: Bytes!
+  operator: Bytes! # address
+  operatorId: Bytes! # bytes32
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OperatorRegistered @entity(immutable: true) {
+  id: Bytes!
+  operator: Bytes! # address
+  operatorId: Bytes! # bytes32
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OperatorSetParamsUpdated @entity(immutable: true) {
+  id: Bytes!
+  quorumNumber: Int! # uint8
+  operatorSetParams_maxOperatorCount: BigInt! # uint32
+  operatorSetParams_kickBIPsOfOperatorStake: Int! # uint16
+  operatorSetParams_kickBIPsOfTotalStake: Int! # uint16
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OperatorSocketUpdate @entity(immutable: true) {
+  id: Bytes!
+  operatorId: Bytes! # bytes32
+  socket: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OperatorStakeUpdate @entity(immutable: true) {
+  id: Bytes!
+  operatorId: Bytes! # bytes32
+  quorumNumber: Int! # uint8
+  stake: BigInt! # uint96
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Operator @entity(immutable: false) {
+  id: String!
+  operatorId: Bytes
+  socket: String
+  stake: BigInt
+  registered: Boolean!
+  pubkeyG1_X: BigInt
+  pubkeyG1_Y: BigInt
+  pubkeyG2_X: [BigInt!]
+  pubkeyG2_Y: [BigInt!]
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+  logIndex: BigInt!
+  createBlockNumber: BigInt
+  createBlockTimestamp: BigInt
+}
+
+type OperatorMap @entity(immutable: false) {
+  id: String!
+  address: Bytes!
+}
+
+type OperatorSocketMap @entity(immutable: false) {
+  id: String!
+  socket: String!
+}

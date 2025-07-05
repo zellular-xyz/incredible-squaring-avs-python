@@ -1,8 +1,6 @@
 ############################# HELP MESSAGE #############################
 .PHONY: $(MAKECMDGOALS)
 
------------------------------: ## 
-
 ___BUILD___: ## 
 
 rebuild:
@@ -11,7 +9,7 @@ rebuild:
 ___TESTS___: ## 
 
 test:
-	python ./tests/integration.py
+	pytest -s ./tests/test_integration.py
 
 build-docker:
 	docker build -t incredible-squaring-avs .
@@ -31,8 +29,8 @@ format: ## Format code with black and isort
 	isort .
 
 format-check: ## Check if code is properly formatted
-	black --check aggregator/ squaring_operator/ challenger/ cli/
-	isort --check-only aggregator/ squaring_operator/ challenger/ cli/
+	black --check squaring_operator.py aggregator.py challenger.py cli tests
+	isort --check-only squaring_operator.py aggregator.py challenger.py cli tests
 
 mypy: ## Run type checking with mypy
 	mypy .
@@ -69,24 +67,54 @@ deploy-all: deploy-eigenlayer deploy-avs uam-permissions create-quorum
 start-anvil-with-state:
 	anvil --load-state tests/anvil/avs-and-eigenlayer-deployed-anvil-state/state.json --print-traces -vvvvv
 
+start-graph-node:
+	docker compose -f avs-subgraph/docker-compose.yml  up
+
+deploy-subgraph:
+	cd avs-subgraph && \
+	graph codegen && \
+	graph build && \
+	graph create --node http://localhost:8020/ avs-subgraph && \
+	graph deploy -l v1 --node http://localhost:8020/ --ipfs http://localhost:5001 avs-subgraph
+
+
+___PYTHON_SETUP___: ## 
+
+setup-and-activate: ## Create venv, activate it, and install dependencies
+	python3 -m venv .venv && \
+	bash -c "source .venv/bin/activate && \
+	pip install . && \
+	echo 'Virtual environment created, activated, and dependencies installed.' && \
+	echo 'For future sessions, activate with: source .venv/bin/activate'"
+
 __CLI__: ## 
 
 cli-setup-operator: send-fund cli-register-operator-with-eigenlayer cli-deposit-into-mocktoken-strategy cli-register-operator-with-avs ## registers operator with eigenlayer and avs
 
 cli-register-operator-with-eigenlayer: ## registers operator with delegationManager
-	python -m cli.main register-with-eigenlayer
+	./.venv/bin/python -m cli.main register-with-eigenlayer
 
 cli-deposit-into-mocktoken-strategy: ## 
-	python -m cli.main deposit
+	./.venv/bin/python -m cli.main deposit
 
 cli-register-operator-with-avs: ## 
-	python -m cli.main register-with-avs
+	./.venv/bin/python -m cli.main register-with-avs
 
 cli-deregister-operator-with-avs: ## 
-	python -m cli.main deregister-from-avs
+	./.venv/bin/python -m cli.main deregister-from-avs
 
 send-fund: ## sends fund to the operator saved in tests/keys/test.ecdsa.key.json
 	cast send 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 --value 10ether --private-key 0x2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6
+
+____OFFCHAIN_SOFTWARE___: ## 
+start-aggregator: ## 
+	./.venv/bin/python -m aggregator
+
+start-operator: ## 
+	./.venv/bin/python -m squaring_operator
+
+start-challenger: ## 
+	./.venv/bin/python -m challenger
 
 __REWARDS__: ##
 
@@ -95,16 +123,19 @@ SENDER_ADDR=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266
 TOKEN_ADDRESS=$(shell jq -r '.addresses.token' contracts/script/deployments/incredible-squaring/31337.json)
 
 create-avs-distributions-root:
+	export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 && \
 	cd contracts && \
 		forge script script/SetupDistributions.s.sol --rpc-url http://localhost:8545 \
 			--broadcast --sig "runAVSRewards()" -v --sender ${SENDER_ADDR}
 
 create-operator-directed-distributions-root:
+	export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 && \
 	cd contracts && \
 		forge script script/SetupDistributions.s.sol --rpc-url http://localhost:8545 \
 			--broadcast --sig "runOperatorDirected()" -v --sender ${SENDER_ADDR}
 
 claim-distributions:
+	export PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 && \
 	cd contracts && \
 		forge script script/SetupDistributions.s.sol --rpc-url http://localhost:8545 \
 			--broadcast --sig "executeProcessClaim()" -v --sender ${SENDER_ADDR}

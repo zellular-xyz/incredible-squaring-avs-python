@@ -31,16 +31,16 @@ class SquaringOperator:
         self.operator_id = None
         self._stop_flag = False
 
-        self.__load_bls_key()
-        self.__load_ecdsa_key()
-        self.__load_clients()
-        self.__load_task_manager()
+        self._load_bls_key()
+        self._load_ecdsa_key()
+        self._load_clients()
+        self._load_task_manager()
 
         if config.get("register_operator_on_startup") == "true":
             self.register_operator_on_startup()
 
         # operator id can only be loaded after registration
-        self.__load_operator_id()
+        self._load_operator_id()
         logger.debug("Operator initialized successfully")
 
     def register_operator_on_startup(self):
@@ -293,7 +293,7 @@ class SquaringOperator:
         )
         return receipt
 
-    def __load_bls_key(self):
+    def _load_bls_key(self):
         """Load the BLS key pair"""
         bls_key_password = os.environ.get("OPERATOR_BLS_KEY_PASSWORD", "")
 
@@ -304,7 +304,7 @@ class SquaringOperator:
             f"BLS PubG1: {self.bls_key_pair.pub_g1.getStr()} PubG2: {self.bls_key_pair.pub_g2.getStr()}"
         )
 
-    def __load_ecdsa_key(self):
+    def _load_ecdsa_key(self):
         """Load the ECDSA private key"""
         ecdsa_key_password = os.environ.get("OPERATOR_ECDSA_KEY_PASSWORD", "")
 
@@ -318,7 +318,7 @@ class SquaringOperator:
         ).address
         logger.debug(f"Loaded ECDSA key for address: {self.operator_address}")
 
-    def __load_clients(self):
+    def _load_clients(self):
         """Load the AVS clients"""
         if self.operator_ecdsa_private_key is None:
             raise RuntimeError("ECDSA private key not loaded")
@@ -340,7 +340,7 @@ class SquaringOperator:
         self.web3 = Web3(Web3.HTTPProvider(self.config["eth_rpc_url"]))
         logger.debug("Successfully loaded AVS clients")
 
-    def __load_task_manager(self):
+    def _load_task_manager(self):
         """Load the task manager contract"""
         if self.clients is None:
             raise RuntimeError("Clients not loaded")
@@ -378,7 +378,7 @@ class SquaringOperator:
         )
         logger.debug(f"Task manager loaded at address: {task_manager_address}")
 
-    def __load_operator_id(self):
+    def _load_operator_id(self):
         """Load the operator ID"""
         if self.clients is None:
             raise RuntimeError("Clients not loaded")
@@ -394,14 +394,14 @@ class SquaringOperator:
 if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    operator_config_path = os.path.join(dir_path, "../config-files/operator1.yaml")
+    operator_config_path = os.path.join(dir_path, "./config-files/operator1.yaml")
     if not os.path.exists(operator_config_path):
         logger.error(f"Config file not found at: {operator_config_path}")
         raise FileNotFoundError(f"Config file not found at: {operator_config_path}")
     with open(operator_config_path, "r") as f:
         operator_config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    avs_config_path = os.path.join(dir_path, "./config-files/avs.yaml")
     if not os.path.exists(avs_config_path):
         logger.error(f"Config file not found at: {avs_config_path}")
         raise FileNotFoundError(f"Config file not found at: {avs_config_path}")

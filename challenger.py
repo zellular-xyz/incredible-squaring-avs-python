@@ -3,7 +3,6 @@ import logging
 import os
 import time
 from dataclasses import dataclass
-from typing import Dict, List, Optional
 
 import yaml
 from eigensdk.chainio.clients.builder import BuildAllConfig, build_all
@@ -73,7 +72,7 @@ class TaskResponseMetadata:
 class TaskResponseData:
     task_response: TaskResponse
     task_response_metadata: TaskResponseMetadata
-    non_signing_operator_pub_keys: List[dict]
+    non_signing_operator_pub_keys: list[dict]
 
     def to_json(self):
 
@@ -128,12 +127,12 @@ class NoErrorInTaskResponse(ChallengerError):
 class Challenger:
     def __init__(self, config):
         self.config = config
-        self.__load_ecdsa_key()
-        self.__load_clients()
-        self.__load_task_manager()
-        self.tasks: Dict[int, Task] = {}
-        self.task_responses: Dict[int, TaskResponseData] = {}
-        self.challenge_hashes: Dict[int, str] = {}
+        self._load_ecdsa_key()
+        self._load_clients()
+        self._load_task_manager()
+        self.tasks: dict[int, Task] = {}
+        self.task_responses: dict[int, TaskResponseData] = {}
+        self.challenge_hashes: dict[int, str] = {}
         self.task_response_channel = None
         self.new_task_created_channel = None
         self._stop_flag = False
@@ -267,7 +266,7 @@ class Challenger:
         )
         return int(task_index)
 
-    def call_challenge_module(self, task_index: int) -> Optional[Exception]:
+    def call_challenge_module(self, task_index: int) -> None:
         """Call the challenge module for a given task."""
         if task_index not in self.tasks:
             raise TaskNotFoundError()
@@ -292,7 +291,7 @@ class Challenger:
             logger.debug("The number squared is correct")
             raise NoErrorInTaskResponse()
 
-    def get_non_signing_operator_pub_keys(self, task_response_log) -> List[dict]:
+    def get_non_signing_operator_pub_keys(self, task_response_log) -> list[dict]:
         """Get public keys of non-signing operators."""
         tx = self.eth_http_client.eth.get_transaction(
             task_response_log["transactionHash"]
@@ -362,7 +361,7 @@ class Challenger:
         )
         self.challenge_hashes[task_index] = receipt["transactionHash"].hex()
 
-    def __load_ecdsa_key(self):
+    def _load_ecdsa_key(self):
         """Load the ECDSA private key"""
         ecdsa_key_password = os.environ.get("CHALLENGER_ECDSA_KEY_PASSWORD", "")
         if not ecdsa_key_password:
@@ -384,7 +383,7 @@ class Challenger:
         ).address
         logger.debug(f"Loaded ECDSA key for address: {self.challenger_address}")
 
-    def __load_clients(self):
+    def _load_clients(self):
         """Load the AVS clients."""
         cfg = BuildAllConfig(
             eth_http_url=self.config["eth_rpc_url"],
@@ -407,7 +406,7 @@ class Challenger:
         self.eth_http_client = self.clients.eth_http_client
         logger.debug("Successfully loaded AVS clients")
 
-    def __load_task_manager(self):
+    def _load_task_manager(self):
         """Load the task manager contract."""
         service_manager_address = self.clients.avs_registry_writer.service_manager_addr
         with open("abis/IncredibleSquaringServiceManager.json") as f:
@@ -430,14 +429,14 @@ class Challenger:
 if __name__ == "__main__":
     dir_path = os.path.dirname(os.path.abspath(__file__))
 
-    challenger_config_path = os.path.join(dir_path, "../config-files/challenger.yaml")
+    challenger_config_path = os.path.join(dir_path, "./config-files/challenger.yaml")
     if not os.path.exists(challenger_config_path):
         logger.error(f"Config file not found at: {challenger_config_path}")
         raise FileNotFoundError(f"Config file not found at: {challenger_config_path}")
     with open(challenger_config_path, "r") as f:
         challenger_config = yaml.load(f, Loader=yaml.BaseLoader)
 
-    avs_config_path = os.path.join(dir_path, "../config-files/avs.yaml")
+    avs_config_path = os.path.join(dir_path, "./config-files/avs.yaml")
     if not os.path.exists(avs_config_path):
         logger.error(f"Config file not found at: {avs_config_path}")
         raise FileNotFoundError(f"Config file not found at: {avs_config_path}")

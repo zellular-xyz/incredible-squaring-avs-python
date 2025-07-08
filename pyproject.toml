@@ -10,7 +10,7 @@ authors = [
     {name = "Zellular", email = "info@zellular.xyz"}
 ]
 dependencies = [
-    "eigensdk @ git+https://github.com/zellular-xyz/eigensdk-python.git",
+    "eigensdk>=0.1.0",
     "web3==7.12.0",
     "PyYAML==6.0.2",
     "Flask==3.1.1",

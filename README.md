@@ -1,8 +1,8 @@
 # Incredible Squaring AVS (Python Edition)
 
-<b> Do not use it in Production, testnet only. </b>
-
 An implementation of the EigenLayer [Incredible Squaring AVS](https://github.com/Layr-Labs/incredible-squaring-avs) in Python. This repository showcases how to use [EigenLayer Python SDK](https://github.com/zellular-xyz/eigensdk-python/) to build an Autonomous Verifiable Service (AVS) in Python.
+
+**⚠️ Warning:** This library is currently in active development. While it can be used for testing and development purposes, please exercise caution when using in production environments.
 
 ## Dependencies
 
